@@ -59,6 +59,5 @@ for alpha in [-4.0, -3.0, -2.0]:
     out = gaussian_random_field(Pk = lambda k: k**alpha, size=256)
     plt.figure()
     plt.imshow(out.real, interpolation='none')
-    plt.show()
     plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)
 
