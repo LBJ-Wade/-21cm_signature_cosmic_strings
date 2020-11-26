@@ -21,10 +21,10 @@ shift_wake_angle = [0, 0]
 def stringwake(size,intensity, anglewake, angleperpixel,shift):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size,size))
-    shift_pixel = shift/angleperpixel#TODO: make sure its an integer
-    wakesize_pixel = anglewake/angleperpixel #TODO: make sure its an even integer
-    for i in range(size/2+shift_pixel[0]-wakesize_pixel/2,size/2+shift_pixel[0]+wakesize_pixel+1):
-        for j in range(size/2+shift_pixel[1]-wakesize_pixel/2,size/2+shift_pixel[1]+wakesize_pixel+1):
+    shift_pixel = int(np.round(shift/angleperpixel))
+    wakesize_pixel = int(np.round(anglewake/angleperpixel))
+    for i in range(size/2+shift_pixel[0]-wakesize_pixel/2,size/2+shift_pixel[0]+wakesize_pixel+1):#TODO: make sure its an integer
+        for j in range(size/2+shift_pixel[1]-wakesize_pixel/2,size/2+shift_pixel[1]+wakesize_pixel+1):#TODO: make sure its an integer
             patch[i, j] = intensity
     return patch
 
