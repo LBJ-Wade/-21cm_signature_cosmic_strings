@@ -7,8 +7,8 @@ with Prof. Robert Brandenberger'''
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-#define constants according to arXiv: 1006.2514v3
 
+#define constants according to arXiv: 1006.2514v3
 #according to The Astrophysical Journal, 622:1356-1362, 2005 April 1, Table 2. Units [cm^3 s^-1]
 def deexitation_crosssection(t_k):
     if 0<t_k and t_k<1.5:
@@ -56,6 +56,8 @@ def deexitation_crosssection(t_k):
 z = 100
 #redshift string formation
 z_i = 1000
+#thickness redshift bin
+delta_z = 0
 #string tension in units of [10^-6]
 gmu_6 = 0.3
 #string speed
@@ -70,17 +72,21 @@ nback=1.9e-7 *(1.+z)**3
 xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
 T_b = 0.07* xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
-#background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452)
-T_back = 0.19055e-3
+#fraction of baryonc mass comprised of HI
+xHI = 0 #TODO: find out xHI
+#background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
+T_back = 0.19055e-3 * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.316*(1.+z)**3 + 0.684)
+#TODO:Average over a redshift bin
+
 
 #define quantities of noise and the patch of the sky
 #patch properties
 patch_size = 256
-patch_angle = 5.
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #wake properties
-wake_brightness = 0.01
-wake_size_angle = 1
+wake_brightness = 1
+wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 #Gaussian noise properties
 sigma_noise = 1
@@ -104,36 +110,45 @@ def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
 
 
 #define function for generating a Fourierspace in every point of the patch we are looking at
-def fftIndgen(n):
-    a = range(0, n/2+1)
-    b = range(1, n/2)
-    b.reverse()
-    b = [-i for i in b]
-    return a + b
+#def fftIndgen(n):
+#    a = range(0, n/2+1)
+#    b = range(1, n/2)              #####not the right method if we want to fit frequency and space
+#    b.reverse()
+#    b = [-i for i in b]
+#    return a + b
+
 
 #define function that generates a gaussian random field of size patch_size
-def gaussian_random_field(Pk = lambda k : k**-3.0, size = 100, sigma = 1):
+def gaussian_random_field(Pk = lambda k : k**-3.0, size = 100, sigma = 1, mean = 0, angleperpixel = 1 ):
     #create a two dimensional projected power spectrum
     def Pk2(kx, ky):
         if kx == 0 and ky == 0:
             return 0.0
         return np.sqrt(Pk(np.sqrt(kx**2 + ky**2)))
     #create the noise
-    noise = np.fft.fft2(np.random.normal(0, sigma, size = (size, size)))
-    #calculate its amplitude
+    noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
+    #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
     amplitude = np.zeros((size, size))
-    for i, kx in enumerate(fftIndgen(size)):
-        for j, ky in enumerate(fftIndgen(size)):
+    for i, kx in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
+        for j, ky in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
             amplitude[i, j] = Pk2(kx, ky)
     #add your signal
     return np.fft.ifft2(noise * amplitude + np.fft.fft2(stringwake_PS(patch_size, wake_brightness, wake_size_angle,
                                                                    angle_per_pixel, shift_wake_angle)))
 
+#define a function for your chi^2 -statistics
+def chi_square():
+    return 0
 
 #Plot the GRF map for a given size for different power spectra
-for alpha in [-4.0, -3.0, -2.0]:
-    out = gaussian_random_field(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise)
+for alpha in [-4.0, -3.0, -0.0]:
+    out = gaussian_random_field(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel)
     plt.figure()
+    plt.xlabel('degree')
+    plt.ylabel('degree')
+    my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
+    plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
+    plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
     plt.imshow(out.real, interpolation='none')
     plt.show()
     #plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)
