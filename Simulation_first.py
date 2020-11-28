@@ -52,8 +52,8 @@ def deexitation_crosssection(t_k):
     else:
         print('T_K is out of scope for the deexcitation fraction')
         return 0
-#redshift probing
-z = 100
+#redshift interval probing #TODO: average all redshift dependent quantities over the redshift bin
+z = 30
 #redshift string formation
 z_i = 1000
 #thickness redshift bin
@@ -72,12 +72,15 @@ nback=1.9e-7 *(1.+z)**3
 xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
 T_b = 0.07* xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
-#fraction of baryonc mass comprised of HI
-xHI = 0 #TODO: find out xHI
+#fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
+#hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
+xHI = 0.75
 #background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
-T_back = 0.19055e-3 * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.316*(1.+z)**3 + 0.684)
-#TODO:Average over a redshift bin
+T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0.684)
 
+print(T_b)
+print(xc)
+print(T_back)
 
 #define quantities of noise and the patch of the sky
 #patch properties
@@ -85,13 +88,15 @@ patch_size = 256
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #wake properties
-wake_brightness = 1
+wake_brightness = T_b
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
-#Gaussian noise properties
-sigma_noise = 1
-mean_noise = 1
-power_law = -2.
+#Gaussian noise properties, alpha noise according to arXiv:2010.15843
+alpha_noise = 0.0475
+sigma_noise = T_back*alpha_noise
+mean_noise = T_back
+power_law = 0.0
+
 
 #define function for a string signal (assuming it is about wake_size_angle deg x wake_size_angle deg in size)
 def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
@@ -101,8 +106,6 @@ def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
     wakesize_pixel = int(np.round(anglewake/angleperpixel))
-    print(size/2+shift_pixel[0]-wakesize_pixel/2)
-    print(size/2+shift_pixel[0]+wakesize_pixel/2+1)
     for i in range(int(size/2+shift_pixel[0]-wakesize_pixel/2), int(size/2+shift_pixel[0]+wakesize_pixel/2+1)):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(int(size/2+shift_pixel[1]-wakesize_pixel/2), int(size/2+shift_pixel[1]+wakesize_pixel/2+1)):
             patch[i, j] = intensity
@@ -119,37 +122,78 @@ def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
 
 
 #define function that generates a gaussian random field of size patch_size
-def gaussian_random_field(Pk = lambda k : k**-3.0, size = 100, sigma = 1, mean = 0, angleperpixel = 1 ):
+def gaussian_random_field(Pk = lambda k : k**-.0, size = 100, sigma = 1, mean = 0, alpha = -1.0 ):
     #create a two dimensional projected power spectrum
     def Pk2(kx, ky):
-        if kx == 0 and ky == 0:
+        if kx == 0 and ky == 0 and alpha != 0.:
             return 0.0
+        if kx == 0 and ky == 0 and alpha == 0.:
+            return 1.0
         return np.sqrt(Pk(np.sqrt(kx**2 + ky**2)))
     #create the noise
-    noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
+    noise_real = np.random.normal(mean, sigma, size = (size, size))
+    noise = np.fft.fft2(noise_real)
     #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
     amplitude = np.zeros((size, size))
     for i, kx in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
         for j, ky in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
             amplitude[i, j] = Pk2(kx, ky)
+    return np.fft.ifft2(noise * amplitude)
+
+
+def gaussian_random_field_with_signal(Pk = lambda k : k**-3.0, size = 100, sigma = 1, mean = 0, angleperpixel = 1. , alpha =-1.0):
+    #create a two dimensional projected power spectrum
+    def Pk2(kx, ky):
+        if kx == 0 and ky == 0 and alpha != 0.:
+            return 0.0
+        if kx == 0 and ky == 0 and alpha == 0.:
+            return 1.0
+        return np.sqrt(Pk(np.sqrt(kx**2 + ky**2)))
+    #create the noise
+    noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
+    #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
+    amplitude = np.zeros((size, size))
+    for i, kx in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
+        for j, ky in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
+            amplitude[i, j] = Pk2(kx, ky)
     #add your signal
     return np.fft.ifft2(noise * amplitude + np.fft.fft2(stringwake_PS(patch_size, wake_brightness, wake_size_angle,
-                                                                   angle_per_pixel, shift_wake_angle)))
+                                                                      angleperpixel, shift_wake_angle)))
+
 
 #define a function for your chi^2 -statistics
-def chi_square():
-    return 0
+def chi_square(size_sample, data_sample, mean_sample, sigma_sample):
+    chi = 0
+    for i in range(0, size_sample):
+        for j in range(0, size_sample):
+            chi = chi + (data_sample[i][j]-mean_sample)**2/(sigma_sample)**2
+    return chi/(size_sample)**2
+
+#number of sample
+n = 3
+memory_chi = np.zeros(n)
+memory_chi_signal =np.zeros(n)
+for k in range(0, n):
+    alpha_fun = power_law
+    out = gaussian_random_field(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
+                                alpha=alpha_fun)
+    out1 = gaussian_random_field_with_signal(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
+                                angleperpixel=angle_per_pixel)
+    memory_chi[k] = chi_square(patch_size, out.real, mean_noise, sigma_noise)
+    memory_chi_signal[k] = chi_square(patch_size, out1.real, mean_noise, sigma_noise)
+    print(memory_chi[k])
+    print(memory_chi_signal[k])
 
 #Plot the GRF map for a given size for different power spectra
-for alpha in [-4.0, -3.0, -0.0]:
-    out = gaussian_random_field(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel)
-    plt.figure()
-    plt.xlabel('degree')
-    plt.ylabel('degree')
-    my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
-    plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    plt.imshow(out.real, interpolation='none')
-    plt.show()
+#for alpha in [-4.0, -3.0, -2.0, -0.0]:
+#    out = gaussian_random_field(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel)
+    #plt.figure()
+    #plt.xlabel('degree')
+    #plt.ylabel('degree')
+    #my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
+    #plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
+    #plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
+    #plt.imshow(out.real, interpolation='none')
+    #plt.show()
     #plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)
 
