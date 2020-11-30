@@ -7,7 +7,7 @@ with Prof. Robert Brandenberger'''
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-
+'''Section 1: Define constants, dimensions, signal brightness, and noise properties'''
 #define constants according to arXiv: 1006.2514v3
 #according to The Astrophysical Journal, 622:1356-1362, 2005 April 1, Table 2. Units [cm^3 s^-1]
 def deexitation_crosssection(t_k):
@@ -78,26 +78,27 @@ xHI = 0.75
 #background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
 T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0.684)
 
-print(T_b)
-print(xc)
-print(T_back)
-
 #define quantities of noise and the patch of the sky
 #patch properties
-patch_size = 256
+patch_size = 32
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
-#wake properties
-wake_brightness = T_b
-wake_size_angle = 1 #in degree
-shift_wake_angle = [0, 0]
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
 sigma_noise = T_back*alpha_noise
 mean_noise = T_back
 power_law = 0.0
+#wake properties
+wake_brightness = sigma_noise
+wake_size_angle = 1 #in degree
+shift_wake_angle = [0, 0]
 
 
+
+
+
+
+'''Section 2: We define functions that define our signal, and the gausian random field'''
 #define function for a string signal (assuming it is about wake_size_angle deg x wake_size_angle deg in size)
 def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
@@ -161,6 +162,11 @@ def gaussian_random_field_with_signal(Pk = lambda k : k**-3.0, size = 100, sigma
                                                                       angleperpixel, shift_wake_angle)))
 
 
+
+
+
+
+'''Section 3: Here we define statistics and methods to define covariance matrices'''
 #define a function for your chi^2 -statistics
 def chi_square(size_sample, data_sample, mean_sample, sigma_sample):
     chi = 0
@@ -169,31 +175,62 @@ def chi_square(size_sample, data_sample, mean_sample, sigma_sample):
             chi = chi + (data_sample[i][j]-mean_sample)**2/(sigma_sample)**2
     return chi/(size_sample)**2
 
-#number of sample
+#for nontrivial power spectra the necessity of introducing a covariance matrix arises. This matrix should be of dimension
+#size x size and describes the covariances between data pixels. It influences the chi_square estimator
+def covariance_matrix(alpha_cov):
+    #amount of simulations we want to calculate cov(X,Y) for
+    m = 25
+    all_arrays = []
+    cov_mat = np.zeros((patch_size, patch_size, patch_size, patch_size))
+    for i in range(0, m):
+        out = gaussian_random_field(Pk=lambda k: k ** alpha_cov, size=patch_size, sigma=1, mean=mean_noise,
+                                alpha=alpha_cov)
+        all_arrays.append(out.real)
+
+    for j in range(0, patch_size):
+        for k in range(0, patch_size):
+            for a in range(0, patch_size):
+                for b in range(0, patch_size):
+                    sum_dummy = 0
+                    for c in range(0, m):
+                        sum_dummy = sum_dummy + (all_arrays[c][j][k] - np.mean(all_arrays[c])) * (all_arrays[c][a][b] - np.mean(all_arrays[c]))
+                    cov_mat[j][k][a][b] = sum_dummy/(m-1)
+    return cov_mat
+
+
+
+
+
+
+'''Section 4: We apply the methods introduced before in various ways.'''
+print(covariance_matrix(0.)[3][3][3])
+#calculate the chi^2 statistic for n datasamples
+'''#number of sample
 n = 3
 memory_chi = np.zeros(n)
 memory_chi_signal =np.zeros(n)
+#calculate the chi_square statistics n times
 for k in range(0, n):
     alpha_fun = power_law
     out = gaussian_random_field(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
                                 alpha=alpha_fun)
     out1 = gaussian_random_field_with_signal(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
-                                angleperpixel=angle_per_pixel)
+                                angleperpixel=angle_per_pixel, alpha=alpha_fun)
     memory_chi[k] = chi_square(patch_size, out.real, mean_noise, sigma_noise)
     memory_chi_signal[k] = chi_square(patch_size, out1.real, mean_noise, sigma_noise)
     print(memory_chi[k])
-    print(memory_chi_signal[k])
+    print(memory_chi_signal[k])'''
 
 #Plot the GRF map for a given size for different power spectra
-#for alpha in [-4.0, -3.0, -2.0, -0.0]:
-#    out = gaussian_random_field(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel)
-    #plt.figure()
-    #plt.xlabel('degree')
-    #plt.ylabel('degree')
-    #my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
-    #plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    #plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    #plt.imshow(out.real, interpolation='none')
-    #plt.show()
-    #plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)
+'''for alpha in [-3.0, -2.0, -0.0]:
+    out = gaussian_random_field_with_signal(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel, alpha=alpha)
+    plt.figure()
+    plt.xlabel('degree')
+    plt.ylabel('degree')
+    my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
+    plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
+    plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
+    plt.imshow(out.real, interpolation='none')
+    plt.show()
+    #plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)'''
 
