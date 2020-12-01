@@ -80,16 +80,16 @@ T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0
 
 #define quantities of noise and the patch of the sky
 #patch properties
-patch_size = 32
+patch_size = 64
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
 sigma_noise = T_back*alpha_noise
 mean_noise = T_back
-power_law = 0.0
+power_law = -0.0
 #wake properties
-wake_brightness = sigma_noise
+wake_brightness = sigma_noise #T_b
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 
@@ -203,12 +203,12 @@ def covariance_matrix(alpha_cov):
 
 
 '''Section 4: We apply the methods introduced before in various ways.'''
-print(covariance_matrix(0.)[3][3][3])
+
 #calculate the chi^2 statistic for n datasamples
-'''#number of sample
-n = 3
+#number of sample
+n = 10
 memory_chi = np.zeros(n)
-memory_chi_signal =np.zeros(n)
+memory_chi_signal = np.zeros(n)
 #calculate the chi_square statistics n times
 for k in range(0, n):
     alpha_fun = power_law
@@ -218,11 +218,11 @@ for k in range(0, n):
                                 angleperpixel=angle_per_pixel, alpha=alpha_fun)
     memory_chi[k] = chi_square(patch_size, out.real, mean_noise, sigma_noise)
     memory_chi_signal[k] = chi_square(patch_size, out1.real, mean_noise, sigma_noise)
-    print(memory_chi[k])
-    print(memory_chi_signal[k])'''
+print(np.mean(memory_chi))
+print(np.mean(memory_chi_signal))
 
 #Plot the GRF map for a given size for different power spectra
-'''for alpha in [-3.0, -2.0, -0.0]:
+'''for alpha in [-2.0]:
     out = gaussian_random_field_with_signal(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel, alpha=alpha)
     plt.figure()
     plt.xlabel('degree')
