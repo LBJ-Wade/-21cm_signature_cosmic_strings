@@ -80,7 +80,7 @@ T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0
 
 #define quantities of noise and the patch of the sky
 #patch properties
-patch_size = 256
+patch_size = 64
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
@@ -100,7 +100,19 @@ shift_wake_angle = [0, 0]
 
 '''Section 2: We define functions that define our signal, and the gausian random field'''
 #define function for a string signal (assuming it is about wake_size_angle deg x wake_size_angle deg in size)
-def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
+
+
+def power_spectrum(k, alpha=-2.):
+    out = k**alpha
+    out[k == 0] = 0.
+    return out
+
+
+def mag_k(k_x, k_y):
+    return np.sqrt(k_x**2+k_y**2)
+
+#define our signal in a real space patch with matched dimensions
+def stringwake_ps(size, intensity, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))
     shift_pixel = np.zeros(2)
@@ -113,24 +125,8 @@ def stringwake_PS(size, intensity, anglewake, angleperpixel, shift):
     return patch
 
 
-#define function for generating a Fourierspace in every point of the patch we are looking at
-#def fftIndgen(n):
-#    a = range(0, n/2+1)
-#    b = range(1, n/2)              #####not the right method if we want to fit frequency and space
-#    b.reverse()
-#    b = [-i for i in b]
-#    return a + b
-
-
 #define function that generates a gaussian random field of size patch_size
-def gaussian_random_field(Pk = lambda k : k**-.0, size = 100, sigma = 1, mean = 0, alpha = -1.0 ):
-    #create a two dimensional projected power spectrum
-    def Pk2(kx, ky):
-        if kx == 0 and ky == 0 and alpha != 0.:
-            return 0.0
-        if kx == 0 and ky == 0 and alpha == 0.:
-            return 1.0
-        return np.sqrt(Pk(np.sqrt(kx**2 + ky**2)))
+def gaussian_random_field(size = 100, sigma = 1, mean = 0, alpha = -1.0 ):
     #create the noise
     noise_real = np.random.normal(mean, sigma, size = (size, size))
     noise = np.fft.fft2(noise_real)
@@ -138,65 +134,28 @@ def gaussian_random_field(Pk = lambda k : k**-.0, size = 100, sigma = 1, mean = 
     amplitude = np.zeros((size, size))
     for i, kx in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
         for j, ky in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
-            amplitude[i, j] = Pk2(kx, ky)
+            amplitude[i, j] = np.sqrt(power_spectrum(mag_k(kx, ky), alpha))
     return np.fft.ifft2(noise * amplitude)
 
 
-def gaussian_random_field_with_signal(Pk = lambda k : k**-3.0, size = 100, sigma = 1, mean = 0, angleperpixel = 1. , alpha =-1.0):
-    #create a two dimensional projected power spectrum
-    def Pk2(kx, ky):
-        if kx == 0 and ky == 0 and alpha != 0.:
-            return 0.0
-        if kx == 0 and ky == 0 and alpha == 0.:
-            return 1.0
-        return np.sqrt(Pk(np.sqrt(kx**2 + ky**2)))
+#define function that generates a gaussian random field of size patch_size with my signal
+def gaussian_random_field_with_signal(size = 100, sigma = 1, mean = 0, angleperpixel = 1. , alpha =-1.0):
     #create the noise
     noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
     #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
     amplitude = np.zeros((size, size))
     for i, kx in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
         for j, ky in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
-            amplitude[i, j] = Pk2(kx, ky)
+            amplitude[i, j] = np.sqrt(power_spectrum(mag_k(kx, ky), alpha))
     #add your signal
-    return np.fft.ifft2(noise * amplitude + np.fft.fft2(stringwake_PS(patch_size, wake_brightness, wake_size_angle,
+    return np.fft.ifft2(noise * amplitude + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
                                                                       angleperpixel, shift_wake_angle)))
 
 
-
-
-
-
-'''Section 3: Here we define statistics and methods to define covariance matrices'''
-#define a function for your chi^2 -statistics
-def chi_square(size_sample, data_sample, mean_sample, sigma_sample):
-    chi = 0
-    for i in range(0, size_sample):
-        for j in range(0, size_sample):
-            chi = chi + (data_sample[i][j]-mean_sample)**2/(sigma_sample)**2
-    return chi/(size_sample)**2
-
-#for nontrivial power spectra the necessity of introducing a covariance matrix arises. This matrix should be of dimension
-#size x size and describes the covariances between data pixels. It influences the chi_square estimator
-def covariance_matrix(alpha_cov):
-    #amount of simulations we want to calculate cov(X,Y) for
-    m = 25
-    all_arrays = []
-    cov_mat = np.zeros((patch_size, patch_size, patch_size, patch_size))
-    for i in range(0, m):
-        out = gaussian_random_field(Pk=lambda k: k ** alpha_cov, size=patch_size, sigma=1, mean=mean_noise,
-                                alpha=alpha_cov)
-        all_arrays.append(out.real)
-
-    for j in range(0, patch_size):
-        for k in range(0, patch_size):
-            for a in range(0, patch_size):
-                for b in range(0, patch_size):
-                    sum_dummy = 0
-                    for c in range(0, m):
-                        sum_dummy = sum_dummy + (all_arrays[c][j][k] - np.mean(all_arrays[c])) * (all_arrays[c][a][b] - np.mean(all_arrays[c]))
-                    cov_mat[j][k][a][b] = sum_dummy/(m-1)
-    return cov_mat
-
+'''Section 3: Define a methode that calculates the chi^2 in fourier space'''
+def chi_square(data_sample_real):
+    data_ft = np.fft.fft2(data_sample_real)
+    data_power_spectrum = np.abs(data_ft)**2
 
 
 
@@ -204,20 +163,18 @@ def covariance_matrix(alpha_cov):
 
 '''Section 4: We apply the methods introduced before in various ways.'''
 
-#calculate the chi^2 statistic for n datasamples
+#calculate the chi^2 statistic for n datasamples in fourier space
 #number of sample
 n = 10
 memory_chi = np.zeros(n)
 memory_chi_signal = np.zeros(n)
 #calculate the chi_square statistics n times
-for k in range(0, n):
+for h in range(0, n):
     alpha_fun = power_law
-    out = gaussian_random_field(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
-                                alpha=alpha_fun)
-    out1 = gaussian_random_field_with_signal(Pk=lambda k: k ** alpha_fun, size=patch_size, sigma=sigma_noise, mean=mean_noise,
-                                angleperpixel=angle_per_pixel, alpha=alpha_fun)
-    memory_chi[k] = chi_square(patch_size, out.real, mean_noise, sigma_noise)
-    memory_chi_signal[k] = chi_square(patch_size, out1.real, mean_noise, sigma_noise)
+    out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=alpha_fun)
+    out1 = gaussian_random_field_with_signal(size=patch_size, sigma=sigma_noise, mean=mean_noise, angleperpixel=angle_per_pixel,
+                                             alpha=alpha_fun)
+
 print(np.mean(memory_chi))
 print(np.mean(memory_chi_signal))
 
