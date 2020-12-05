@@ -80,19 +80,18 @@ T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0
 
 #define quantities of noise and the patch of the sky
 #patch properties
-patch_size = 64
+patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
-sigma_noise = T_back*alpha_noise
-mean_noise = T_back
-power_law = -0.0
+sigma_noise = 1#T_back*alpha_noise
+mean_noise = 1#T_back
+power_law = -2.0
 #wake properties
-wake_brightness = sigma_noise #T_b
+wake_brightness = sigma_noise#T_b
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
-
 
 
 
@@ -107,9 +106,6 @@ def power_spectrum(k, alpha=-2.):
     out[k == 0] = 0.
     return out
 
-
-def mag_k(k_x, k_y):
-    return np.sqrt(k_x**2+k_y**2)
 
 #define our signal in a real space patch with matched dimensions
 def stringwake_ps(size, intensity, anglewake, angleperpixel, shift):
@@ -126,38 +122,46 @@ def stringwake_ps(size, intensity, anglewake, angleperpixel, shift):
 
 
 #define function that generates a gaussian random field of size patch_size
-def gaussian_random_field(size = 100, sigma = 1, mean = 0, alpha = -1.0 ):
+def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0 ):
     #create the noise
     noise_real = np.random.normal(mean, sigma, size = (size, size))
     noise = np.fft.fft2(noise_real)
-    #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
-    amplitude = np.zeros((size, size))
-    for i, kx in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
-        for j, ky in enumerate(np.fft.fftfreq(size, angle_per_pixel*2*math.pi)):
-            amplitude[i, j] = np.sqrt(power_spectrum(mag_k(kx, ky), alpha))
-    return np.fft.ifft2(noise * amplitude)
+    kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel*2*math.pi), np.fft.fftfreq(size, angle_per_pixel*2*math.pi))
+    mag_k = np.sqrt(kx ** 2 + ky ** 2)
+    grf = np.fft.ifft2( power_spectrum(mag_k, alpha)**0.5).real #noise *
+    return grf, mag_k
 
 
 #define function that generates a gaussian random field of size patch_size with my signal
-def gaussian_random_field_with_signal(size = 100, sigma = 1, mean = 0, angleperpixel = 1. , alpha =-1.0):
+def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., angleperpixel = 1. , alpha =-1.0):
     #create the noise
     noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
-    #calculate its amplitude. Note that in this form the k modes are defined as in units [1/degree]
-    amplitude = np.zeros((size, size))
-    for i, kx in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
-        for j, ky in enumerate(np.fft.fftfreq(size, angleperpixel*2*math.pi)):
-            amplitude[i, j] = np.sqrt(power_spectrum(mag_k(kx, ky), alpha))
-    #add your signal
-    return np.fft.ifft2(noise * amplitude + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
-                                                                      angleperpixel, shift_wake_angle)))
+    kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
+                         np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
+    mag_k = np.sqrt(kx ** 2 + ky ** 2)
+    grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
+                                                                      angleperpixel, shift_wake_angle))).real
+    return grf, mag_k
 
 
 '''Section 3: Define a methode that calculates the chi^2 in fourier space'''
-def chi_square(data_sample_real):
+def chi_square(data_sample_real, magnitude_k):
+    bins = 300
     data_ft = np.fft.fft2(data_sample_real)
-    data_power_spectrum = np.abs(data_ft)**2
+    #data_power_spectrum = np.abs(data_ft)**2
+    k_bins = np.linspace(0.25, 0.95*magnitude_k.max(), bins)
+    k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
+    digi = np.digitize(magnitude_k, k_bins) - 1
+    #binned_ps = []
+    #for i in range(0, digi.max()):
+    #    binned_ps.append(np.mean(data_power_spectrum[digi == i]))
+    #binned_ps = np.array(binned_ps)
+    binned_ft = []
+    for k in range(0, digi.max()):
+        binned_ft.append(np.mean(data_ft[digi == k]))
+    binned_ft = np.array(binned_ft).real  #ins
 
-
+    return np.sum(binned_ft**2/(power_spectrum(k_bin_cents) * bins * patch_size * sigma_noise**2))
 
 
 
@@ -165,29 +169,24 @@ def chi_square(data_sample_real):
 
 #calculate the chi^2 statistic for n datasamples in fourier space
 #number of sample
-n = 10
-memory_chi = np.zeros(n)
-memory_chi_signal = np.zeros(n)
-#calculate the chi_square statistics n times
-for h in range(0, n):
-    alpha_fun = power_law
-    out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=alpha_fun)
-    out1 = gaussian_random_field_with_signal(size=patch_size, sigma=sigma_noise, mean=mean_noise, angleperpixel=angle_per_pixel,
-                                             alpha=alpha_fun)
-
-print(np.mean(memory_chi))
-print(np.mean(memory_chi_signal))
+N = 300
+chi_list = []
+for l in range(0, N):
+    out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
+    #out = gaussian_random_field_with_signal( size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
+    chi_list.append(chi_square(out[0], out[1]))
+print(np.mean(chi_list))
 
 #Plot the GRF map for a given size for different power spectra
-'''for alpha in [-2.0]:
-    out = gaussian_random_field_with_signal(Pk = lambda k: k**alpha, size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel = angle_per_pixel, alpha=alpha)
+'''for alpha in [power_law]:
+    out = gaussian_random_field_with_signal( size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=alpha)
     plt.figure()
     plt.xlabel('degree')
     plt.ylabel('degree')
     my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
-    plt.xticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    plt.yticks([0, 51, 102, 128, 154, 205, 255], my_ticks)
-    plt.imshow(out.real, interpolation='none')
+    plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+    plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+    plt.imshow(out[0], interpolation='none')
     plt.show()
     #plt.savefig('test_GRF_with'+str(np.abs(alpha))+'.png', dpi=400)'''
 
