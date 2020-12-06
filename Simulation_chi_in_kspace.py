@@ -107,6 +107,30 @@ def power_spectrum(k, alpha=-2.):
     return out
 
 
+#deep21                       A  beta  alpha Xi     type
+#--------------------------------------------------------
+#Galactic Synchrotron       1100, 3.3, 2.80, 4.0)   1
+#Point Sources                47, 1.1, 2.07, 1.0)   2
+#Galactic free-free        0.088, 3.0, 2.15, 32.)   3
+#Extragalactic free-free   0.014, 1.0, 2.10, 35.)   4
+def foreground_power_spectrum(k, A, beta, a): # Xi):
+    #an example from arXiv:2010.15843 (deep21)
+    lref = 1100
+    vref = 130 #MHz
+    ps = np.zeros((len(k[1]), len(k[1])))
+    for i in range(0, len(k[1])):
+        for j in range(0, len(k[1])):
+            l = 360 * k[i][j]/(2 * math.pi)
+            l_bottom = math.floor(l)
+            l_top = l_bottom + 1
+            delta_l = l - l_bottom
+            if l_bottom == 0:
+                ps[i][j] = delta_l * A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a
+            else:
+                ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420/(z+1)))**a - A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a)  #exp()
+    return ps
+
+
 #define our signal in a real space patch with matched dimensions
 def stringwake_ps(size, intensity, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
@@ -131,6 +155,22 @@ def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
     grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha)**0.5).real #noise *
     return grf, mag_k
 
+
+#define a function the generates a foreground
+def grf_foreground(type, size):
+    noise_real = np.random.randn(size, size)
+    noise = np.fft.fft2(noise_real)
+    kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
+                         np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
+    mag_k = np.sqrt(kx ** 2 + ky ** 2)
+    if type == 1 :
+        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80)**0.5).real, mag_k
+    if type == 2:
+        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 47, 1.1, 2.07) ** 0.5).real, mag_k
+    if type == 3:
+        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15) ** 0.5).real, mag_k
+    if type == 4:
+        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10) ** 0.5).real, mag_k
 
 #define function that generates a gaussian random field of size patch_size with my signal
 def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., angleperpixel = 1. , alpha =-1.0):
@@ -165,13 +205,23 @@ def chi_square(data_sample_real, magnitude_k):
 
 #calculate the chi^2 statistic for n datasamples in fourier space
 #number of sample
-N = 300
+'''N = 300
 chi_list = []
 for l in range(0, N):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
-    out = gaussian_random_field_with_signal( size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
+    out = gaussian_random_field_with_signal(size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
     chi_list.append(chi_square(out[0], out[1]))
-print(np.mean(chi_list))
+print(np.mean(chi_list))'''
+
+out = grf_foreground(4, patch_size)
+plt.xlabel('degree')
+plt.ylabel('degree')
+my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
+plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.imshow(out[0])
+plt.colorbar(label = 'mK')
+plt.savefig('test_foreground_EG_f_f.png', dpi=400)
 
 #Plot the GRF map for a given size for different power spectra
 '''for alpha in [power_law]:
