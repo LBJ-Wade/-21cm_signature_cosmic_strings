@@ -85,11 +85,11 @@ patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
-sigma_noise = 1#T_back*alpha_noise
+sigma_noise = 0.1#T_back*alpha_noise
 mean_noise = 1#T_back
 power_law = -2.0
 #wake properties
-wake_brightness = sigma_noise#T_b
+wake_brightness = 0.1*sigma_noise#T_b
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 
@@ -122,13 +122,13 @@ def stringwake_ps(size, intensity, anglewake, angleperpixel, shift):
 
 
 #define function that generates a gaussian random field of size patch_size
-def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0 ):
+def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
     #create the noise
     noise_real = np.random.normal(mean, sigma, size = (size, size))
     noise = np.fft.fft2(noise_real)
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel*2*math.pi), np.fft.fftfreq(size, angle_per_pixel*2*math.pi))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    grf = np.fft.ifft2( power_spectrum(mag_k, alpha)**0.5).real #noise *
+    grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha)**0.5).real #noise *
     return grf, mag_k
 
 
@@ -148,20 +148,16 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
 def chi_square(data_sample_real, magnitude_k):
     bins = 300
     data_ft = np.fft.fft2(data_sample_real)
-    #data_power_spectrum = np.abs(data_ft)**2
-    k_bins = np.linspace(0.25, 0.95*magnitude_k.max(), bins)
+    data_ps = np.abs(data_ft)**2/(patch_size*sigma_noise)**2
+    k_bins = np.linspace(0.1, 0.95*magnitude_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(magnitude_k, k_bins) - 1
-    #binned_ps = []
-    #for i in range(0, digi.max()):
-    #    binned_ps.append(np.mean(data_power_spectrum[digi == i]))
-    #binned_ps = np.array(binned_ps)
-    binned_ft = []
+    binned_ps = []
     for k in range(0, digi.max()):
-        binned_ft.append(np.mean(data_ft[digi == k]))
-    binned_ft = np.array(binned_ft).real  #ins
+        binned_ps.append(np.mean(data_ps[digi == k]))
+    binned_ps = np.array(binned_ps).real
 
-    return np.sum(binned_ft**2/(power_spectrum(k_bin_cents) * bins * patch_size * sigma_noise**2))
+    return np.sum(binned_ps/(power_spectrum(k_bin_cents)*bins))
 
 
 
@@ -172,8 +168,8 @@ def chi_square(data_sample_real, magnitude_k):
 N = 300
 chi_list = []
 for l in range(0, N):
-    out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
-    #out = gaussian_random_field_with_signal( size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
+    #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
+    out = gaussian_random_field_with_signal( size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
     chi_list.append(chi_square(out[0], out[1]))
 print(np.mean(chi_list))
 
