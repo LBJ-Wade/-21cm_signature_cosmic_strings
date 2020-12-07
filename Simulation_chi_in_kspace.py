@@ -63,13 +63,13 @@ gmu_6 = 0.3
 #string speed
 vsgammas_square = 1./3
 #temperature of HI atoms inside the wake [K]
-T_K = 20*gmu_6*vsgammas_square*(z_i+1.)/(z+1)
+T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z+1)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+xc = 0.16# 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
 T_b = 0.07* xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
@@ -85,15 +85,17 @@ patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
-sigma_noise = 0.1#T_back*alpha_noise
-mean_noise = 1#T_back
+sigma_noise = T_back*alpha_noise
+mean_noise = T_back
 power_law = -2.0
+#not so improtant ..
+
 #wake properties
-wake_brightness = 0.1*sigma_noise#T_b
+wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 
-
+print(wake_brightness)
 
 
 
@@ -117,18 +119,33 @@ def foreground_power_spectrum(k, A, beta, a): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100
     vref = 130 #MHz
-    ps = np.zeros((len(k[1]), len(k[1])))
-    for i in range(0, len(k[1])):
-        for j in range(0, len(k[1])):
-            l = 360 * k[i][j]/(2 * math.pi)
+    print(np.dtype(k[1]))
+    if np.dtype(k[1]).name == 'np.float64': #TODO: fix
+        ps = np.zeros(len(k))
+        for i in range(0, len(k)):
+            l = 360 * k[i] / (2 * math.pi)
             l_bottom = math.floor(l)
             l_top = l_bottom + 1
             delta_l = l - l_bottom
             if l_bottom == 0:
-                ps[i][j] = delta_l * A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a
+                ps[i] = delta_l * A * (lref / l_top) ** beta * (vref ** 2 / (1420 / (z + 1))) ** a
             else:
-                ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420/(z+1)))**a - A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a)  #exp()
-    return ps
+                ps[i] = delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 / (z + 1))) ** a - A * (
+                            lref / l_top) ** beta * (vref ** 2 / (1420 / (z + 1))) ** a)  # exp()
+        return ps
+    else:
+        ps = np.zeros((len(k[1]), len(k[1])))
+        for i in range(0, len(k[1])):
+            for j in range(0, len(k[1])):
+                l = 360 * k[i][j]/(2 * math.pi)
+                l_bottom = math.floor(l)
+                l_top = l_bottom + 1
+                delta_l = l - l_bottom
+                if l_bottom == 0:
+                    ps[i][j] = delta_l * A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a
+                else:
+                    ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420/(z+1)))**a - A * (lref/l_top)**beta * (vref**2/(1420/(z+1)))**a)  #exp()
+        return ps
 
 
 #define our signal in a real space patch with matched dimensions
@@ -163,14 +180,19 @@ def grf_foreground(type, size):
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
                          np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    if type == 1 :
-        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80)**0.5).real, mag_k
+    if type == 1:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 700, 3.3, 2.80)**0.5).real
+        return grf, mag_k
     if type == 2:
-        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 47, 1.1, 2.07) ** 0.5).real, mag_k
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 700, 3.3, 2.80)**0.5).real
+        return grf, mag_k
     if type == 3:
-        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15) ** 0.5).real, mag_k
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15) ** 0.5).real
+        return grf, mag_k
     if type == 4:
-        return np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10) ** 0.5).real, mag_k
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10) ** 0.5).real
+        return grf, mag_k
+
 
 #define function that generates a gaussian random field of size patch_size with my signal
 def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., angleperpixel = 1. , alpha =-1.0):
@@ -185,7 +207,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
 
 
 '''Section 3: Define a methode that calculates the chi^2 in fourier space'''
-def chi_square(data_sample_real, magnitude_k):
+def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
     bins = 300
     data_ft = np.fft.fft2(data_sample_real)
     data_ps = np.abs(data_ft)**2/(patch_size*sigma_noise)**2
@@ -196,32 +218,42 @@ def chi_square(data_sample_real, magnitude_k):
     for k in range(0, digi.max()):
         binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
-
-    return np.sum(binned_ps/(power_spectrum(k_bin_cents)*bins))
-
+    if foreground_type == 0:
+        return np.sum(binned_ps/(power_spectrum(k_bin_cents, alpha)*bins))
+    if foreground_type == 1:
+        return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 700, 3.3, 2.80)*bins))
+    if foreground_type == 2:
+        return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 47, 1.1, 2.07)*bins))
+    if foreground_type == 3:
+        return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15)*bins))
+    if foreground_type == 4:
+        return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10)*bins))
 
 
 '''Section 4: We apply the methods introduced before in various ways.'''
 
 #calculate the chi^2 statistic for n datasamples in fourier space
 #number of sample
-'''N = 300
+N = 300
 chi_list = []
 for l in range(0, N):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
-    out = gaussian_random_field_with_signal(size = patch_size, sigma = sigma_noise, mean = mean_noise, angleperpixel=angle_per_pixel, alpha=power_law)
-    chi_list.append(chi_square(out[0], out[1]))
-print(np.mean(chi_list))'''
+    out = grf_foreground(1, patch_size)
+    chi_list.append(chi_square(out[0], out[1], power_law, 1))
+print(np.mean(chi_list))
 
-out = grf_foreground(4, patch_size)
+'''out = grf_foreground(2, patch_size)
+out2 = np.fft.ifft2(np.fft.fft2(out[0]) + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
+                                                                      angle_per_pixel, shift_wake_angle))).real
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
 plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
-plt.imshow(out[0])
+plt.imshow(out2)
 plt.colorbar(label = 'mK')
-plt.savefig('test_foreground_EG_f_f.png', dpi=400)
+plt.show()
+#plt.savefig('test_foreground_EG_f_f.png', dpi=400)'''
 
 #Plot the GRF map for a given size for different power spectra
 '''for alpha in [power_law]:
