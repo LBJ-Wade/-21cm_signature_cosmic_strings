@@ -95,7 +95,6 @@ wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 
-print(wake_brightness)
 
 
 
@@ -119,8 +118,7 @@ def foreground_power_spectrum(k, A, beta, a): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100
     vref = 130 #MHz
-    print(np.dtype(k[1]))
-    if np.dtype(k[1]).name == 'np.float64': #TODO: fix
+    if k[1].ndim == 0:
         ps = np.zeros(len(k))
         for i in range(0, len(k)):
             l = 360 * k[i] / (2 * math.pi)
@@ -173,9 +171,24 @@ def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
     return grf, mag_k
 
 
+#define function that generates a gaussian random field of size patch_size with my signal
+def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., angleperpixel = 1. , alpha =-1.0):
+    #create the noise
+    noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
+    kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
+                         np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
+    mag_k = np.sqrt(kx ** 2 + ky ** 2)
+    grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angleperpixel,
+                                                                                               shift_wake_angle))).real
+    return grf, mag_k
+
+
 #define a function the generates a foreground
 def grf_foreground(type, size):
-    noise_real = np.random.randn(size, size)
+    noise_real = np.random.normal(0, 1, size = (size, size))
     noise = np.fft.fft2(noise_real)
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
                          np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
@@ -194,23 +207,48 @@ def grf_foreground(type, size):
         return grf, mag_k
 
 
-#define function that generates a gaussian random field of size patch_size with my signal
-def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., angleperpixel = 1. , alpha =-1.0):
-    #create the noise
-    noise = np.fft.fft2(np.random.normal(mean, sigma, size = (size, size)))
+#define a function the generates a foreground with the string signal included
+def grf_foreground_signal(type, size):
+    noise_real = np.random.normal(0, 1, size = (size, size))
+    noise = np.fft.fft2(noise_real)
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
                          np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
-                                                                      angleperpixel, shift_wake_angle))).real
-    return grf, mag_k
+    if type == 1:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 700, 3.3, 2.80)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angle_per_pixel,
+                                                                                               shift_wake_angle))).real
+        return grf, mag_k
+    if type == 2:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 700, 3.3, 2.80)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angle_per_pixel,
+                                                                                               shift_wake_angle))).real
+        return grf, mag_k
+    if type == 3:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angle_per_pixel,
+                                                                                               shift_wake_angle))).real
+        return grf, mag_k
+    if type == 4:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angle_per_pixel,
+                                                                                               shift_wake_angle))).real
+        return grf, mag_k
 
 
 '''Section 3: Define a methode that calculates the chi^2 in fourier space'''
-def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
+def chi_square(data_sample_real, magnitude_k, alpha, foreground_type, sigma):
     bins = 300
     data_ft = np.fft.fft2(data_sample_real)
-    data_ps = np.abs(data_ft)**2/(patch_size*sigma_noise)**2
+    data_ps = np.abs(data_ft)**2/(patch_size*sigma)**2
     k_bins = np.linspace(0.1, 0.95*magnitude_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(magnitude_k, k_bins) - 1
@@ -221,6 +259,10 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
     if foreground_type == 0:
         return np.sum(binned_ps/(power_spectrum(k_bin_cents, alpha)*bins))
     if foreground_type == 1:
+        #plt.plot(k_bin_cents, binned_ps)
+        #plt.plot(k_bin_cents, foreground_power_spectrum(k_bin_cents, 700, 3.3, 2.80))
+        #plt.xlim(0, 0.5)
+        plt.show()
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 700, 3.3, 2.80)*bins))
     if foreground_type == 2:
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 47, 1.1, 2.07)*bins))
@@ -231,16 +273,32 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 
 
 '''Section 4: We apply the methods introduced before in various ways.'''
+#calculate the chi^2 statistic for N datasamples in fourier space
+#N = 300
+#chi_list = []
+#for l in range(0, N):
+    #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
+#    out = grf_foreground(1, patch_size)
+#    chi_list.append(chi_square(out[0], out[1], power_law, 1, 0.4))
+#print(np.mean(chi_list))
 
-#calculate the chi^2 statistic for n datasamples in fourier space
-#number of sample
+#calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 300
-chi_list = []
+foreground= 1 #TODO: alter everywhere
+delta_chi_list = []
+#check, if the result is achieved by random fluctuations
+delta_chi_list_check = []
 for l in range(0, N):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
-    out = grf_foreground(1, patch_size)
-    chi_list.append(chi_square(out[0], out[1], power_law, 1))
-print(np.mean(chi_list))
+    out_signal = grf_foreground_signal(foreground, patch_size)
+    out_check = grf_foreground(foreground, patch_size)
+    out_checkcheck = grf_foreground(foreground, patch_size)
+    delta_chi_list_check.append(chi_square(out_check[0], out_check[1], power_law, foreground, 1)-chi_square(out_checkcheck[0],
+                                                                                                    out_checkcheck[1], power_law, foreground, 1))
+
+    delta_chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 1) - chi_square(out_signal[0], out_signal[1], power_law, foreground, 1))
+print('For a treatment without string signal we get delta chi^2 = '+ str(np.abs(np.mean(delta_chi_list_check))))
+print('For a treatment with string signal we get delta chi^2 = '+ str(np.abs(np.mean(delta_chi_list))))
 
 '''out = grf_foreground(2, patch_size)
 out2 = np.fft.ifft2(np.fft.fft2(out[0]) + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
