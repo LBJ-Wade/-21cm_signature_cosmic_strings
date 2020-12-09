@@ -284,21 +284,25 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type, sigma):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 300
-foreground= 1 #TODO: alter everywhere
-delta_chi_list = []
+foreground= 1
+chi_list_signal = []
+chi_list = []
 #check, if the result is achieved by random fluctuations
-delta_chi_list_check = []
+chi_list_check = []
+
 for l in range(0, N):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
     out_signal = grf_foreground_signal(foreground, patch_size)
     out_check = grf_foreground(foreground, patch_size)
     out_checkcheck = grf_foreground(foreground, patch_size)
-    delta_chi_list_check.append(chi_square(out_check[0], out_check[1], power_law, foreground, 1)-chi_square(out_checkcheck[0],
-                                                                                                    out_checkcheck[1], power_law, foreground, 1))
-
-    delta_chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 1) - chi_square(out_signal[0], out_signal[1], power_law, foreground, 1))
-print('For a treatment without string signal we get delta chi^2 = '+ str(np.abs(np.mean(delta_chi_list_check))))
-print('For a treatment with string signal we get delta chi^2 = '+ str(np.abs(np.mean(delta_chi_list))))
+    chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 1))
+    chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground, 1))
+    chi_list_check.append(chi_square(out_checkcheck[0], out_checkcheck[1], power_law, foreground, 1))
+print('For 1st without signal: '+ str(np.mean(chi_list)))
+print('For 2nd without signal: '+ str(np.mean(chi_list_check)))
+print('For with signal: '+ str(np.mean(chi_list_signal)))
+print('For a treatment without string signal we get delta chi^2 = '+ str(np.abs(np.mean(chi_list_check)-np.mean(chi_list))))
+print('For a treatment with string signal we get delta chi^2 = '+ str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
 
 '''out = grf_foreground(2, patch_size)
 out2 = np.fft.ifft2(np.fft.fft2(out[0]) + np.fft.fft2(stringwake_ps(patch_size, wake_brightness, wake_size_angle,
