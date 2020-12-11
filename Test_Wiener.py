@@ -12,10 +12,13 @@ patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = 2 * math.pi * angle_per_pixel
 N = 512
+
+
 def power_spectrum(k, alpha=2., sigma=1.):
-    out = 1/k**alpha *1/sigma**2
-    out[k <0.01] = 0.
+    out = 1/k**alpha * 1/sigma**2
+    out[k < 1e-2] = 1e-2
     return out
+
 
 bins = 300
 grf = np.random.normal(0, 1, (N, N))
@@ -24,10 +27,11 @@ mag_k = np.sqrt(kx**2 + ky**2)
 signal = np.zeros((N, N))
 for i in range(206, 306):
     for j in range(206, 306):
-        signal[i][j] = 0.2
+        signal[i][j] = 0.25
+'''ft_signal_square = 0.25 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx * np.floor(1. * 1/angle_per_pixel)) *
+                    np.sin(math.pi * ky * np.floor(1. * 1/angle_per_pixel)))**2'''
 grf_w_power_spec_noise = np.fft.ifft2(np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal)).real
 ft_all = (np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal))
-#ft = np.fft.fft2(grf_w_power_spec_noise)
 pspec = np.abs(ft_all)**2/N**2
 k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
 k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
@@ -43,10 +47,10 @@ plt.show()
 #plt.savefig('test_GRF_power.png', dpi=400)
 
 #Wiener-filter: (n times)
-pspec_signal = np.abs(np.fft.fft2(signal))**2
-pspec_noise = 1e-7* np.abs(np.fft.fft2(np.fft.fft2(grf) * power_spectrum(mag_k)**.5))**2
-wien_fn = pspec_signal/(pspec_noise + pspec_signal)
-#plt.imshow(pspec_signal)
+pspec_signal = np.fft.fft2(signal)**2/N**2
+pspec_noise = power_spectrum(mag_k)
+wien_fn = pspec_signal/(pspec_noise)#+ pspec_signal)
+#plt.imshow(pspec_noise.real)
 #plt.colorbar()
 #plt.show()
 wien_real = np.fft.ifft2(wien_fn * ft_all).real

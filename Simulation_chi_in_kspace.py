@@ -53,7 +53,7 @@ def deexitation_crosssection(t_k):
         print('T_K is out of scope for the deexcitation fraction')
         return 0
 #redshift interval probing #TODO: average all redshift dependent quantities over the redshift bin
-z = 30
+z = 13
 #redshift string formation
 z_i = 1000
 #thickness redshift bin
@@ -69,7 +69,7 @@ T_gamma = 2.725*(1+z)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc = 0.16# 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+xc =  4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
 T_b = 0.07* xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
@@ -95,8 +95,8 @@ wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 
-
-
+print(1420/(1.+z))
+print(wake_brightness)
 
 '''Section 2: We define functions that define our signal, and the gausian random field'''
 #define function for a string signal (assuming it is about wake_size_angle deg x wake_size_angle deg in size)
@@ -117,7 +117,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100
-    A = A_pure * 1e-7
+    A = A_pure# * 1e-10
     vref = 130 #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -285,7 +285,7 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 300
-foreground = 1
+foreground = 2
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
