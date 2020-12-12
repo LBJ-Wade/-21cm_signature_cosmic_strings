@@ -53,7 +53,7 @@ def deexitation_crosssection(t_k):
         print('T_K is out of scope for the deexcitation fraction')
         return 0
 #redshift interval probing #TODO: average all redshift dependent quantities over the redshift bin
-z = 13
+z = 30
 #redshift string formation
 z_i = 1000
 #thickness redshift bin
@@ -117,7 +117,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100
-    A = A_pure# * 1e-10
+    A = A_pure #* 1e-1
     vref = 130 #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -191,6 +191,9 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
 def grf_foreground(type, size, sigma):
     noise_real = np.random.normal(0, 1, size = (size, size))
     noise = np.fft.fft2(noise_real)
+    noise1 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
+    noise2 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
+    noise3 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
                          np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
@@ -206,12 +209,21 @@ def grf_foreground(type, size, sigma):
     if type == 4:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, sigma) ** 0.5).real
         return grf, mag_k
+    if type == 5:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, sigma) ** 0.5 + noise1 *
+                                    foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, sigma) ** 0.5 + noise2 *
+                           foreground_power_spectrum(mag_k, 57, 1.1, 2.07, sigma) ** 0.5 + noise3 *
+                           foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, sigma) ** 0.5).real
+        return grf, mag_k
 
 
 #define a function the generates a foreground with the string signal included
 def grf_foreground_signal(type, size, sigma):
     noise_real = np.random.normal(0, 1, size = (size, size))
     noise = np.fft.fft2(noise_real)
+    noise1 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
+    noise2 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
+    noise3 = np.fft.fft2(np.random.normal(0, 1, size = (size, size)))
     kx, ky = np.meshgrid(np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi),
                          np.fft.fftfreq(size, angle_per_pixel * 2 * math.pi))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
@@ -243,7 +255,16 @@ def grf_foreground_signal(type, size, sigma):
                                                                                                angle_per_pixel,
                                                                                                shift_wake_angle))).real
         return grf, mag_k
-
+    if type == 5:
+        grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, sigma) ** 0.5 + noise1 *
+                                    foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, sigma) ** 0.5 + noise2 *
+                           foreground_power_spectrum(mag_k, 57, 1.1, 2.07, sigma)**0.5 + noise3 *
+                           foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, sigma)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
+                                                                                               wake_brightness,
+                                                                                               wake_size_angle,
+                                                                                               angle_per_pixel,
+                                                                                               shift_wake_angle))).real
+        return grf, mag_k
 
 '''Section 3: Define a methode that calculates the chi^2 in fourier space'''
 def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
@@ -260,10 +281,6 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
     if foreground_type == 0:
         return np.sum(binned_ps/(power_spectrum(k_bin_cents, alpha)*bins))
     if foreground_type == 1:
-        #plt.plot(k_bin_cents, binned_ps)
-        #plt.plot(k_bin_cents, foreground_power_spectrum(k_bin_cents, 700, 3.3, 2.80))
-        #plt.xlim(0, 0.5)
-        plt.show()
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 1100, 3.3, 2.80, 1)*bins))
     if foreground_type == 2:
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 57, 1.1, 2.07, 1)*bins))
@@ -271,6 +288,11 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15, 1)*bins))
     if foreground_type == 4:
         return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 1)*bins))
+    if foreground_type == 5:
+        return np.sum(binned_ps/(foreground_power_spectrum(k_bin_cents, 1100, 3.3, 2.80, 1)*bins +
+                                 foreground_power_spectrum(k_bin_cents, 57, 1.1, 2.07, 1)*bins +
+                                 foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15, 1)*bins +
+                                 foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 1)*bins))
 
 
 '''Section 4: We apply the methods introduced before in various ways.'''
@@ -284,8 +306,8 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 #print(np.mean(chi_list))
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
-N = 300
-foreground = 2
+N = 150
+foreground = 5
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
@@ -296,6 +318,10 @@ for l in range(0, N):
     out_signal = grf_foreground_signal(foreground, patch_size, 1)
     out_check = grf_foreground(foreground, patch_size, 1)
     out_checkcheck = grf_foreground(foreground, patch_size, 1)
+    if l ==0:
+        plt.imshow(out_signal[0].real)
+        plt.colorbar()
+        plt.show()
     chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground))
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground))
     chi_list_check.append(chi_square(out_checkcheck[0], out_checkcheck[1], power_law, foreground))
