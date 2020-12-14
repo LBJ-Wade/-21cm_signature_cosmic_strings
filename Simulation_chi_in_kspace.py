@@ -306,7 +306,7 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 #print(np.mean(chi_list))
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
-N = 150
+N = 100
 foreground = 5
 chi_list_signal = []
 chi_list = []
