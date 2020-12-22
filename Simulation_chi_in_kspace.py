@@ -122,9 +122,9 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 #Extragalactic free-free   0.014, 1.0, 2.10, 35.)   4
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
-    lref = 1100
-    A = A_pure #* 1e-1
-    vref = 130 #MHz
+    lref = 1100.
+    A = A_pure #*1e-6
+    vref = 130. #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
         for i in range(0, len(k)):
@@ -149,8 +149,9 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 if l_bottom == 0:
                     ps[i][j] = delta_l * A * (lref/l_top)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
                 else:
-                    ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/1420**2)**a - A * (lref/l_top)**beta * (vref**2/1420**2)**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
-        return ps
+                    ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+        #print(np.mean(ps)**0.5)
+        return ps/sigma**2
 
 
 #define our signal in a real space patch with matched dimensions
@@ -168,7 +169,8 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     f_y = int(size/2+shift_pixel[1]+wakesize_pixel/2+1)
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
-            patch[i, j] = 1e3*0.07 * xc/(xc+1.)*2/3*((1 + z_wake + dz_wake/2 * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2 * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7 * ((1 + z_wake + dz_wake/2 * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2 * (i-i_x)/(f_x-i_x))**3.5) #in mK
+            patch[i, j] = 1e3*0.07 * xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
+    #print(str(patch[f_x-1,f_y-1])+ ' signal ')
     return patch #we assume here, the wake is centered in the middle of the redshift bin
 
 
@@ -312,7 +314,7 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 100
-foreground = 1
+foreground = 4
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
