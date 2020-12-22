@@ -52,7 +52,7 @@ def deexitation_crosssection(t_k):
         print('T_K is out of scope for the deexcitation fraction')
         return 0
 #redshift interval probing #TODO: average all redshift dependent quantities over the redshift bin
-z = 30
+z = 20
 #redshift string formation
 z_i = 1000
 #frequency bin: 10kHz = 0.01 MHz
@@ -123,7 +123,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure #*1e-6
+    A = A_pure *1e-6
     vref = 130. #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -314,7 +314,7 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 100
-foreground = 4
+foreground = 1
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
