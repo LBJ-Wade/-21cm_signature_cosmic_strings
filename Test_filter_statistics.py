@@ -34,9 +34,6 @@ for j in range(0, len(chi2)):
     grf = np.random.normal(0, sigma1, (N, N))
     kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
     mag_k = np.sqrt(kx**2 + ky**2)
-    #plt.imshow(power_spectrum(mag_k).real)
-    #plt.colorbar()
-    #plt.show()
     pspec_noise = power_spectrum(mag_k, 2, 1)
     wien_fn = pspec_signal / (pspec_noise + pspec_signal)
 
@@ -45,8 +42,8 @@ for j in range(0, len(chi2)):
     ift_filtered = np.fft.ifft2(ft_filtered).real
 
     pspec = np.abs(ft_filtered) ** 2 / N ** 2
-    pspec_check = np.abs(ft) ** 2 / N ** 2
-    pspec_noise = power_spectrum(mag_k, 2, 1) * wien_fn**2
+    pspec_check = np.abs(ft) ** 2 / N ** 2 #unfiltered
+    pspec_noise = power_spectrum(mag_k, 2, 1) * wien_fn**2 #filtered power spectrum
     k_bins = np.linspace(0.1, 0.95 * mag_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(mag_k, k_bins) - 1
