@@ -8,6 +8,8 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
+
+
 '''Section 1: Define constants, dimensions, signal brightness, and noise properties'''
 #define constants according to arXiv: 1006.2514v3
 #according to The Astrophysical Journal, 622:1356-1362, 2005 April 1, Table 2. Units [cm^3 s^-1]
@@ -51,8 +53,9 @@ def deexitation_crosssection(t_k):
     else:
         print('T_K is out of scope for the deexcitation fraction')
         return 0
-#redshift interval probing #TODO: average all redshift dependent quantities over the redshift bin
-z = 20
+
+#redshift interval probing
+z = 30
 #redshift string formation
 z_i = 1000
 #frequency bin: 10kHz = 0.01 MHz
@@ -82,8 +85,9 @@ T_b = 0.07 * xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
 xHI = 0.75
 #background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
 T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0.684)
-
 print('The string wake brightness temperature at '+str(z)+' is '+str(T_b*1e3)+' mK.')
+
+
 #define quantities of noise and the patch of the sky
 #patch properties
 patch_size = 512
@@ -96,6 +100,7 @@ mean_noise = T_back
 power_law = -2.0
 #not so improtant ..
 
+
 #wake properties
 wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
@@ -104,13 +109,14 @@ wake_thickness = (1.+z_i)**0.5/(1.+z)**0.5 *(1.+z) * 24 * math.pi/15 * gmu_6 * 1
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
+
 '''Section 2: We define functions that define our signal, and the gausian random field'''
 #define function for a string signal (assuming it is about wake_size_angle deg x wake_size_angle deg in size)
 
 
 def power_spectrum(k, alpha=-2., sigma=1.):
     out = k**alpha * 1/sigma**2
-    out[k == 0] = 0.
+    out[k < 0.01] =  (0.01) ** alpha
     return out
 
 
@@ -123,7 +129,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure *1e-6
+    A = A_pure #*1e-1
     vref = 130. #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -131,11 +137,15 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             l = 360 * k[i] / (2 * math.pi)
             l_bottom = math.floor(l)
             l_top = l_bottom + 1
-            delta_l = l - l_bottom
+            delta_l = -l + l_top
             if l_bottom == 0:
-                ps[i] = delta_l * A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2
+                if l < 0.01:
+                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (
+                                1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                else:
+                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2
             else:
-                ps[i] = delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
+                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
                             lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
         return ps*1/sigma**2
     else:
@@ -147,9 +157,13 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 l_top = l_bottom + 1
                 delta_l = l - l_bottom
                 if l_bottom == 0:
-                    ps[i][j] = delta_l * A * (lref/l_top)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
+                    if l < 0.01:
+                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (
+                                1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                    else:
+                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
                 else:
-                    ps[i][j] = delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
         #print(np.mean(ps)**0.5)
         return ps/sigma**2
 
@@ -273,18 +287,37 @@ def grf_foreground_signal(type, size, sigma):
                                                                                                shift_wake_angle))).real
         return grf, mag_k
 
-'''Section 3: Define a methode that calculates the chi^2 in fourier space'''
-def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
+
+'''Section 3.1: Define a methode that calculates the chi^2 in fourier space'''
+
+
+def chi_square(data_sample_real, magnitude_k, alpha, foreground_type, filter):
     bins = 300
     data_ft = np.fft.fft2(data_sample_real)
-    data_ps = np.abs(data_ft)**2/(patch_size)**2
+    data_ps = np.abs(data_ft)**2/patch_size**2
     k_bins = np.linspace(0.1, 0.95*magnitude_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(magnitude_k, k_bins) - 1
+    filter_stuff = wien_filter(foreground_type, magnitude_k)
+    data_filter = filter_stuff[1] * data_ft
+    data_ps_filter = np.abs(data_filter)**2/patch_size**2
+    pspec_noise = filter_stuff[0] * filter_stuff[1]**2
     binned_ps = []
     for k in range(0, digi.max()):
         binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
+    ####   for filtered data
+    binned_ps_filtered = []
+    for k in range(0, digi.max()):
+        binned_ps_filtered.append(np.mean(data_ps_filter[digi == k]))
+    binned_ps_filtered = np.array(binned_ps_filtered).real
+    binned_ps_noise = []
+    for i in range(0, digi.max()):
+        binned_ps_noise.append(np.mean(pspec_noise[digi == i]))
+    binned_ps_noise = np.array(binned_ps_noise)
+    ###############
+    if filter == 1:
+        return np.sum(binned_ps_filtered/(binned_ps_noise*bins))
     if foreground_type == 0:
         return np.sum(binned_ps/(power_spectrum(k_bin_cents, alpha)*bins))
     if foreground_type == 1:
@@ -302,6 +335,45 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
                                  foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 35., 1)*bins))
 
 
+'''Section 3.2: define the filter funcitons'''
+
+
+def wien_filter(foreground_comp, k):
+    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle)))**2/patch_size**2
+    pspec_noise = 0
+    if foreground_comp == 0:
+        pspec_noise = power_spectrum(k, power_law, sigma_noise)
+    if foreground_comp == 1:
+        pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1)
+    if foreground_comp == 2:
+        pspec_noise = (foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1))
+    if foreground_comp == 3:
+        pspec_noise = foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1)
+    if foreground_comp == 4:
+        pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    if foreground_comp == 5:
+        pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    return pspec_noise, pspec_signal/(pspec_noise + pspec_signal)
+
+
+def matched_filter(foreground_comp, k):
+    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle)))**2/patch_size**2
+    pspec_noise = 0
+    if foreground_comp == 0:
+        pspec_noise = power_spectrum(k, power_law, sigma_noise)
+    if foreground_comp == 1:
+        pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1)
+    if foreground_comp == 2:
+        pspec_noise = (foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1))
+    if foreground_comp == 3:
+        pspec_noise = foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1)
+    if foreground_comp == 4:
+        pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    if foreground_comp == 5:
+        pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    return pspec_noise, pspec_signal/pspec_noise
+
+
 '''Section 4: We apply the methods introduced before in various ways.'''
 #calculate the chi^2 statistic for N datasamples in fourier space
 #N = 300
@@ -314,29 +386,35 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 100
-foreground = 1
+foreground = 4
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
-chi_list_check = []
-
+chi_list2 = []
+#check for improvement via filtration
+chi_filtered = []
 for l in range(0, N):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
     out_signal = grf_foreground_signal(foreground, patch_size, 1)
     out_check = grf_foreground(foreground, patch_size, 1)
-    out_checkcheck = grf_foreground(foreground, patch_size, 1)
+    out_2 = grf_foreground(foreground, patch_size, 1)
     if l ==0:
         plt.imshow(out_signal[0].real)
         plt.colorbar()
-        plt.show()
-    chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground))
-    chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground))
-    chi_list_check.append(chi_square(out_checkcheck[0], out_checkcheck[1], power_law, foreground))
-print('For 1st without signal: '+ str(np.mean(chi_list)))
-print('For 2nd without signal: '+ str(np.mean(chi_list_check)))
-print('For with signal: '+ str(np.mean(chi_list_signal)))
-print('For a treatment without string signal we get delta chi^2 = '+ str(np.abs(np.mean(chi_list_check)-np.mean(chi_list))))
-print('For a treatment with string signal we get delta chi^2 = '+ str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
+        #plt.show()
+    chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 0))
+    chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground, 0))
+    chi_list2.append(chi_square(out_2[0], out_2[1], power_law, foreground, 1))
+    chi_filtered.append(chi_square(out_signal[0], out_signal[1], power_law, foreground, 1))
+print('For without signal: ' + str(np.mean(chi_list)))
+#print('For 2nd without signal: ' + str(np.mean(chi_list_check)))
+print('For with signal: ' + str(np.mean(chi_list_signal)))
+print('For without signal and filtered: ' + str(np.mean(chi_list2)))
+print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
+#print('For a treatment without string signal we get delta chi^2 = ' + str(np.abs(np.mean(chi_list_check)-np.mean(chi_list))))
+print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
+print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
+print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
 
 '''out = grf_foreground_signal(1, patch_size, 1)
 
