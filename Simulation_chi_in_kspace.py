@@ -71,20 +71,20 @@ gmu_6 = 0.3
 #string speed
 vsgammas_square = 1./3
 #temperature of HI atoms inside the wake [K]
-T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z+1)
+T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
 #CMB temperature [K]
-T_gamma = 2.725*(1+z)
+T_gamma = 2.725*(1+z_wake)
 #background numberdensity hydrogen [cm^-3]
-nback=1.9e-7 *(1.+z)**3
+nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
 xc =  4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
-T_b = 0.07 * xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z)
+T_b = 0.07 * xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
 #background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
-T_back = (0.19055e-3) * (0.049*0.67*(1.+z)**2 * xHI)/np.sqrt(0.267*(1.+z)**3 + 0.684)
+T_back = (0.19055e-3) * (0.049*0.67*(1.+z_wake)**2 * xHI)/np.sqrt(0.267*(1.+z_wake)**3 + 0.684)
 print('The string wake brightness temperature at '+str(z)+' is '+str(T_b*1e3)+' mK.')
 
 
@@ -106,6 +106,7 @@ wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
 wake_thickness = (1.+z_i)**0.5/(1.+z)**0.5 *(1.+z) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5
+theta =0 #angle
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
@@ -173,6 +174,7 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))
     dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5
+    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**-0.5 * 1420/np.cos(theta) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
@@ -183,8 +185,9 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     f_y = int(size/2+shift_pixel[1]+wakesize_pixel/2+1)
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
-            patch[i, j] = 1e3*0.07 * xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
-    #print(str(patch[f_x-1,f_y-1])+ ' signal ')
+            patch[i, j] = 1e3 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
+            #patch[i, j] = 1e3*0.07 * xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
+    #print(str(patch[f_x-1,f_y-1])+ ' signal ') #TODO: Change back
     return patch #we assume here, the wake is centered in the middle of the redshift bin
 
 
