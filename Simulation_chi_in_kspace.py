@@ -79,7 +79,7 @@ nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
 xc =  4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
-T_b = 0.07 * xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
+T_b = 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
@@ -105,8 +105,9 @@ power_law = -2.0
 wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
+rot_angle_uv = 0 #rotation angle in the uv plane
 wake_thickness = (1.+z_i)**0.5/(1.+z)**0.5 *(1.+z) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5
-theta =0 #angle
+theta = math.pi/4 #angle 1
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
@@ -130,7 +131,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure #*1e-1
+    A = A_pure *1e-4
     vref = 130. #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -141,13 +142,17 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             delta_l = -l + l_top
             if l_bottom == 0:
                 if l < 0.01:
-                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (
-                                1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a# (
+                                #1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 TODO:Change
                 else:
-                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2
+                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a *((1+z_wake)**2)**a # (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2
             else:
-                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
-                            lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
+                #ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
+                #            lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
+                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
+                                    A * (lref / l_bottom) ** beta * (vref ** 2 / 1420 ** 2) ** a - A * (
+                                    lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a) *((1+z_wake)**2)**a
+
         return ps*1/sigma**2
     else:
         ps = np.zeros((len(k[1]), len(k[1])))
@@ -159,12 +164,15 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 delta_l = l - l_bottom
                 if l_bottom == 0:
                     if l < 0.01:
-                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (
-                                1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a #(
+                                #1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 TODO:change
                     else:
-                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
+                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a *((1+z_wake)**2)**a #(1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
                 else:
-                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
+                                           A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
+                                               lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
         #print(np.mean(ps)**0.5)
         return ps/sigma**2
 
@@ -183,10 +191,11 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     f_x = int(size/2+shift_pixel[0]+wakesize_pixel/2+1)
     i_y = int(size/2+shift_pixel[1]-wakesize_pixel/2)
     f_y = int(size/2+shift_pixel[1]+wakesize_pixel/2+1)
+    #print(df_wake/delta_f)
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
-            patch[i, j] = 1e3 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            #patch[i, j] = 1e3*0.07 * xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
+            patch[i, j] = 1e3 * (2*np.sin(theta)**2)**-1 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
+            #patch[i, j] = 1e3*0.07 * (2*np.sin(theta)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
     #print(str(patch[f_x-1,f_y-1])+ ' signal ') #TODO: Change back
     return patch #we assume here, the wake is centered in the middle of the redshift bin
 
@@ -389,7 +398,7 @@ def matched_filter(foreground_comp, k):
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 100
-foreground = 4
+foreground = 1
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
