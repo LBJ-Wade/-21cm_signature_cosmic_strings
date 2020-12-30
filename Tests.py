@@ -2,26 +2,39 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-theta = math.pi/4
-field = np.zeros((200,200))
+
+
+#rotation
+
+'''theta = math.pi/4
+field = np.zeros((500,500))
 for i in range(50,150):
     for j in range(50,150):
-        field[i][j] = 1
-field2 = np.zeros((200,200))
+        field[i][j] = -(j-50)/(100.)
+field2 = np.zeros((500,500))
 for k in range(50,150):
     for l in range(50,150):
-        field2[int(round(math.cos(theta)*(k-100)-math.sin(theta)*(l-100)))+100][int(round(math.sin(theta)*(k-100)+math.cos(theta)*(l-100)))+100]=field[k][l]
+        field2[int(np.floor(math.cos(theta)*(k-100)-math.sin(theta)*(l-100)))+100][int(np.floor(math.sin(theta)*(k-100)+math.cos(theta)*(l-100)))+100]=field[k][l]
 for p in range(1,199):
     for q in range(1,199):
-        if (field2[p][q-1]+field2[p-1][q]+field2[p+1][q]+field2[p][q+1])>2*max([field2[p][q-1],field2[p-1][q],field2[p+1][q],field2[p][q+1]]):
-            field2[p][q]=1
-'''field3= np.zeros((20,20))
+        if np.abs(field2[p][q-1]+field2[p-1][q]+field2[p+1][q]+field2[p][q+1])>2*max(np.abs([field2[p][q-1],field2[p-1][q],field2[p+1][q],field2[p][q+1]])):
+            a=np.array([field2[p][q - 1], field2[p - 1][q], field2[p + 1][q], field2[p][q + 1]])
+            field2[p][q]=np.mean(a[np.nonzero(a)])
+field3= np.zeros((20,20))
 for a in range(0,20):
     for b in range(0,20):
         field3[a][b]=field2[a+120][b+120]
-field3[20-1][20-1]=1'''
+field3[20-1][20-1]=1
 plt.imshow(field2)
-plt.show()
+plt.show()'''
+
+
+
+
+
+
+
+#Interferometer PS
 
 '''z = 30 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
@@ -58,6 +71,13 @@ kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx**2 + ky**2)
 k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
 k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2'''
+
+
+
+
+
+
+#Integration methods
 
 def deexitation_crosssection(t_k):
     if 1<t_k and t_k<=2:
@@ -129,10 +149,10 @@ for i in range(5, n):
     dz_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (z_wake + 1.) ** 0.5
     df_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (
             z_wake + 1.) ** -0.5 * 1420 / np.cos(theta)  # MHz. THe 2sin^2 theta cancels when multiplied with T_b
-    #T_b =1e3*0.07 *(2*np.sin(theta)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) - 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
-    T_b= 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1*0-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
-    T_b_2 = np.sqrt(1100 * 1e-6 * (1100 / 10.) ** 3.3 * ((130. ** 2 / 1420 ** 2) *(1+z_wake)**2)**2.8)
-    #T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.8+1.) - (1.+ z+delta_z)**(2.8+1.)))
+    T_b =1e3*0.07 *(2*np.sin(theta)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) - 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
+    #T_b = 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
+    #T_b_2 = np.sqrt(1100 * 1e-6 * (1100 / 0.100) ** 3.3 * ((130. ** 2 / 1420 ** 2) *(1+z_wake)**2)**2.8)
+    T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.8+1.) - (1.+ z+delta_z)**(2.8+1.)))
     #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
     #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
     xHI = 0.75
@@ -162,9 +182,3 @@ plt.plot(np.linspace(5, n, n-5), T_b_plot/T_b_plot_2 )
 plt.xlabel('z')
 plt.ylabel('mK')
 plt.show()
-'''z = 30
-z_i = 1000
-gmu_6 = 0.3
-#string speed
-vsgammas_square = 1./3
-print(24 * math.pi /15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (1.+z_i)**0.5/(1.+z)**-0.5) * (1420/(1.+z))'''

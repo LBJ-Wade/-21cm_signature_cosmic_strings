@@ -105,9 +105,10 @@ power_law = -2.0
 wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
-rot_angle_uv = 0 #rotation angle in the uv plane
+rot_angle_uv = math.pi/4 #rotation angle in the uv plane
 wake_thickness = (1.+z_i)**0.5/(1.+z)**0.5 *(1.+z) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5
-theta = math.pi/4 #angle 1
+theta1 = math.pi/4 #angle 1 in z-space
+theta2 = 0 #angle 2 in z-space
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
@@ -131,7 +132,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure *1e-4
+    A = A_pure *1e-5
     vref = 130. #MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -181,8 +182,9 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
 def stringwake_ps(size, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))
+    patch_rotated = np.zeros((size, size))
     dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5
-    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**-0.5 * 1420/np.cos(theta) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
+    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**-0.5 * 1420*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
@@ -194,9 +196,21 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     #print(df_wake/delta_f)
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
-            patch[i, j] = 1e3 * (2*np.sin(theta)**2)**-1 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            #patch[i, j] = 1e3*0.07 * (2*np.sin(theta)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
+            patch[i, j] = 1e3 * (2.*np.sin(theta1)**2)**-1 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
+            #patch[i, j] = 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
     #print(str(patch[f_x-1,f_y-1])+ ' signal ') #TODO: Change back
+    if rot_angle_uv!=0:
+        for k in range(i_x, f_x):
+            for l in range(i_y, f_y):
+                patch_rotated[int(np.floor(math.cos(rot_angle_uv) * (k - size/2) - math.sin(rot_angle_uv) * (l - size/2))) + size/2][
+                    int(np.floor(math.sin(rot_angle_uv) * (k - size/2) + math.cos(rot_angle_uv) * (l - size/2))) + size/2] = patch[k][l]
+        for p in range(1, size-1):
+            for q in range(1, size-1):
+                if np.abs(patch_rotated[p][q - 1] + patch_rotated[p - 1][q] + patch_rotated[p + 1][q] + patch_rotated[p][q + 1]) > 2 * max(np.abs(
+                       [patch_rotated[p][q - 1], patch_rotated[p - 1][q], patch_rotated[p + 1][q], patch_rotated[p][q + 1]])):
+                    a = np.array([patch_rotated[p][q - 1], patch_rotated[p - 1][q], patch_rotated[p + 1][q], patch_rotated[p][q + 1]])
+                    patch_rotated[p][q] = np.mean(a[np.nonzero(a)])
+        return patch_rotated
     return patch #we assume here, the wake is centered in the middle of the redshift bin
 
 
@@ -413,7 +427,7 @@ for l in range(0, N):
     if l ==0:
         plt.imshow(out_signal[0].real)
         plt.colorbar()
-        #plt.show()
+        plt.show()
     chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 0))
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground, 0))
     chi_list2.append(chi_square(out_2[0], out_2[1], power_law, foreground, 1))
