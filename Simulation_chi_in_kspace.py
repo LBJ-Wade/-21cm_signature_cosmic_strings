@@ -55,13 +55,13 @@ def deexitation_crosssection(t_k):
         return 0
 
 #redshift interval probing
-z = 30
+z = 25
 #redshift string formation
 z_i = 1000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.01
+delta_f = 0.02
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
-delta_z = -delta_f/(1420/(z+1.)+delta_f)*(z+1)
+delta_z = -delta_f/(1420)*(z+1)     #(1420/(z+1.)+delta_f)*(z+1)
 print('Frequency interval: f in ['+ str(1420/(1.+z))+', '+str(1420/(1.+z)+delta_f) +'] MHz.')
 print('Therefore, dz = '+ str(delta_z)+' and we cover ['+ str(z)+', '+ str(z+delta_z)+ '].')
 #redshift of center of wake
@@ -77,7 +77,7 @@ T_gamma = 2.725*(1+z_wake)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc =  4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #wake brightness temperature [K]
 T_b = 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
@@ -105,10 +105,10 @@ power_law = -2.0
 wake_brightness = T_b* 1e3 #in mK
 wake_size_angle = 1 #in degree
 shift_wake_angle = [0, 0]
-rot_angle_uv = math.pi/4 #rotation angle in the uv plane
-wake_thickness = (1.+z_i)**0.5/(1.+z)**0.5 *(1.+z) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5
+rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 theta1 = math.pi/4 #angle 1 in z-space
 theta2 = 0 #angle 2 in z-space
+wake_thickness = (1.+z_i)**0.5/(1.+z_wake)**0.5 *(1.+z_wake) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5*2.*np.sin(theta1)**2/np.cos(theta1)
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
@@ -132,8 +132,8 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure *1e-5
-    vref = 130. #MHz
+    A = A_pure# *1e-3
+    vref = 130.  # MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
         for i in range(0, len(k)):
@@ -143,16 +143,15 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             delta_l = -l + l_top
             if l_bottom == 0:
                 if l < 0.01:
-                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a# (
-                                #1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 TODO:Change
+                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**aTODO:Change
                 else:
-                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a *((1+z_wake)**2)**a # (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2
+                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2 #((1+z_wake)**2)**a
             else:
-                #ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
-                #            lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
-                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
-                                    A * (lref / l_bottom) ** beta * (vref ** 2 / 1420 ** 2) ** a - A * (
-                                    lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a) *((1+z_wake)**2)**a
+                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
+                            lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
+                #ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
+                #                    A * (lref / l_bottom) ** beta * (vref ** 2 / 1420 ** 2) ** a - A * (
+                #                    lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a) *((1+z_wake)**2)**a
 
         return ps*1/sigma**2
     else:
@@ -165,15 +164,14 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 delta_l = l - l_bottom
                 if l_bottom == 0:
                     if l < 0.01:
-                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a #(
-                                #1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 TODO:change
+                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
                     else:
-                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a *((1+z_wake)**2)**a #(1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2
+                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
                 else:
-                    #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
-                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
-                                           A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
-                                               lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
+                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
+                    #                       A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
+                    #                           lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
         #print(np.mean(ps)**0.5)
         return ps/sigma**2
 
@@ -183,22 +181,24 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))
     patch_rotated = np.zeros((size, size))
-    dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5
-    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**-0.5 * 1420*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
+    dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
+    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * 1/(z_wake + 1.)**0.5 * 1420.*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
+    #print(-dz_wake/delta_z)
+    #print(df_wake/delta_f)
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
-    wakesize_pixel = int(np.round(anglewake/angleperpixel))
-    i_x = int(size/2+shift_pixel[0]-wakesize_pixel/2)
-    f_x = int(size/2+shift_pixel[0]+wakesize_pixel/2+1)
-    i_y = int(size/2+shift_pixel[1]-wakesize_pixel/2)
-    f_y = int(size/2+shift_pixel[1]+wakesize_pixel/2+1)
+    wakesize_pixel = [int(np.round(np.cos(theta1)*anglewake/angleperpixel)), int(np.round(anglewake/angleperpixel))] #theta1 term added depending on the direction of rot
+    i_x = int(size/2.+shift_pixel[0]-wakesize_pixel[0]/2.)
+    f_x = int(size/2.+shift_pixel[0]+wakesize_pixel[0]/2.+1)
+    i_y = int(size/2.+shift_pixel[1]-wakesize_pixel[1]/2.)
+    f_y = int(size/2.+shift_pixel[1]+wakesize_pixel[1]/2.+1)
     #print(df_wake/delta_f)
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
-            patch[i, j] = 1e3 * (2.*np.sin(theta1)**2)**-1 * df_wake/delta_f * (i-i_x)/(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            #patch[i, j] = 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)/(f_x-i_x))**3.5) #in mK
-    #print(str(patch[f_x-1,f_y-1])+ ' signal ') #TODO: Change back
+            #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
+            patch[i, j] = 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5) #in mK
+    #print(str(patch[f_x-1,f_y-1])+ ' signal ')
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
             for l in range(i_y, f_y):
@@ -411,8 +411,8 @@ def matched_filter(foreground_comp, k):
 #print(np.mean(chi_list))
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
-N = 100
-foreground = 1
+N = 1
+foreground = 4
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations

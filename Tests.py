@@ -145,14 +145,17 @@ for i in range(5, n):
     nback=1.9e-7 *(1.+z_wake)**3
     #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
     xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+    xcc = 4*1.9e-7*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *2.725)
     #wake brightness temperature [K]
     dz_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (z_wake + 1.) ** 0.5
     df_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (
             z_wake + 1.) ** -0.5 * 1420 / np.cos(theta)  # MHz. THe 2sin^2 theta cancels when multiplied with T_b
-    T_b =1e3*0.07 *(2*np.sin(theta)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) - 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
-    #T_b = 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
+    #T_b = 1e3*0.07 *(2*np.sin(theta)**2)**-1* xcc*(1+z_wake)**2/(xcc*(1+z_wake)**2+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) #- 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
+    #print(T_bb)
+    T_b = 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
+    print(T_b)
     #T_b_2 = np.sqrt(1100 * 1e-6 * (1100 / 0.100) ** 3.3 * ((130. ** 2 / 1420 ** 2) *(1+z_wake)**2)**2.8)
-    T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.8+1.) - (1.+ z+delta_z)**(2.8+1.)))
+    T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.1+1.) - (1.+ z+delta_z)**(2.1+1.)))
     #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
     #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
     xHI = 0.75
@@ -166,6 +169,7 @@ for i in range(5, n):
 #print(T_b_plot[30-1])
 #print(T_b_plot_2[13-1])
 #print(T_b_plot_2[30-1])
+
 markers_on =[8]
 #plt.plot(np.linspace(5, n, n-5), np.abs(T_b_plot),"-|", markevery= markers_on)
 plt.plot(np.linspace(5, n, n-5), T_b_plot,"-|", markevery= markers_on)
@@ -173,11 +177,11 @@ plt.plot(np.linspace(5, n, n-5), np.abs(T_b_plot_2),"-|", markevery= markers_on)
 plt.show()
 a = T_b_plot/T_b_plot_2
 dum=np.zeros(2)
-for i in range(10, len(a)):
-    if a[i]> dum[0]:
-        dum[0]=a[i]
-        dum[1]=i
-    print(dum[1]+5)
+for i in range(5, len(a)):
+    #if a[i]> dum[0]:
+    dum[0]=a[i]
+    dum[1]=i
+    print(str(dum[1]+5)+'  '+str(dum[0]))
 plt.plot(np.linspace(5, n, n-5), T_b_plot/T_b_plot_2 )
 plt.xlabel('z')
 plt.ylabel('mK')
