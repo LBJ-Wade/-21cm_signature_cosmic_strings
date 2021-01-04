@@ -55,11 +55,11 @@ def deexitation_crosssection(t_k):
         return 0
 
 #redshift interval probing
-z = 25
+z = 30
 #redshift string formation
 z_i = 1000
-#frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.02
+#frequency bin: 40kHz = 0.04 MHz
+delta_f = 0.04
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)     #(1420/(z+1.)+delta_f)*(z+1)
 print('Frequency interval: f in ['+ str(1420/(1.+z))+', '+str(1420/(1.+z)+delta_f) +'] MHz.')
@@ -132,7 +132,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure# *1e-3
+    A = A_pure*1e-6
     vref = 130.  # MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -411,8 +411,8 @@ def matched_filter(foreground_comp, k):
 #print(np.mean(chi_list))
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space
-N = 1
-foreground = 4
+N = 100
+foreground = 1
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations

@@ -130,8 +130,8 @@ for i in range(5, n):
     z_i = 1000
     #thickness redshift bin
     theta =math.pi/4
-    delta_f = 0.01
-    delta_z = -delta_f/(1420/(z+1.)+delta_f)*(z+1)
+    delta_f = 0.04
+    delta_z = -delta_f/(1420)*(z+1)
     z_wake = z+delta_z/2
     #string tension in units of [10^-6]
     gmu_6 = 0.3
@@ -150,12 +150,12 @@ for i in range(5, n):
     dz_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (z_wake + 1.) ** 0.5
     df_wake = 24 * math.pi / 15 * gmu_6 * 1e-6 * vsgammas_square ** 0.5 * (z_i + 1) ** 0.5 * (
             z_wake + 1.) ** -0.5 * 1420 / np.cos(theta)  # MHz. THe 2sin^2 theta cancels when multiplied with T_b
-    #T_b = 1e3*0.07 *(2*np.sin(theta)**2)**-1* xcc*(1+z_wake)**2/(xcc*(1+z_wake)**2+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) #- 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
+    T_b = 1e3*0.07 *(2*np.sin(theta)**2)**-1* xcc*(1+z_wake)**2/(xcc*(1+z_wake)**2+1.)*2./3*((1 + z_wake + dz_wake/2. )**1.5-(1 + z_wake - dz_wake/2. )**1.5) - 1e3*(2*np.sin(theta)**2)**-1*0.07 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. )**3.5-(1 + z_wake - dz_wake/2. )**3.5) #in mK
     #print(T_bb)
-    T_b = 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
+    #T_b = 1e3*(2*np.sin(theta)**2)**-1* df_wake/delta_f * 0.07 * xc/(xc+1.)*(1-2.725*(1+z_wake)/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)))*(1.+z_wake)**0.5
     print(T_b)
     #T_b_2 = np.sqrt(1100 * 1e-6 * (1100 / 0.100) ** 3.3 * ((130. ** 2 / 1420 ** 2) *(1+z_wake)**2)**2.8)
-    T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.1+1.) - (1.+ z+delta_z)**(2.1+1.)))
+    T_b_2 =  1e-3* (1./(3.8)*((1.+z)**(2.99+1.) - (1.+ z+delta_z)**(2.99+1.)))
     #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
     #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
     xHI = 0.75
