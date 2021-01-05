@@ -72,7 +72,10 @@ mag_k = np.sqrt(kx**2 + ky**2)
 k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
 k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2'''
 
-
+x=2
+y=1
+y+=3
+print(y)
 
 
 

@@ -83,8 +83,8 @@ T_b = 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
-#background temperature [K] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
-T_back = (0.19055e-3) * (0.049*0.67*(1.+z_wake)**2 * xHI)/np.sqrt(0.267*(1.+z_wake)**3 + 0.684)
+#background temperature [mK] [formula according to arXiv:2010.15843] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
+T_back = (0.19055) * (0.049*0.67*(1.+z_wake)**2 * xHI)/np.sqrt(0.267*(1.+z_wake)**3 + 0.684)
 print('The string wake brightness temperature at '+str(z)+' is '+str(T_b*1e3)+' mK.')
 
 
@@ -177,9 +177,11 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
 
 
 #define our signal in a real space patch with matched dimensions
-def stringwake_ps(size, anglewake, angleperpixel, shift):
+def stringwake_ps(size, anglewake, angleperpixel, shift, background_on):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))
+    if background_on == True:
+        patch = np.ones((size, size)) * T_back
     patch_rotated = np.zeros((size, size))
     dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
     df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * 1/(z_wake + 1.)**0.5 * 1420.*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
@@ -197,7 +199,7 @@ def stringwake_ps(size, anglewake, angleperpixel, shift):
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
             #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            patch[i, j] = 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5) #in mK
+            patch[i, j] += 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5) #in mK
     #print(str(patch[f_x-1,f_y-1])+ ' signal ')
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
@@ -235,7 +237,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
     grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha, sigma) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angleperpixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
     return grf, mag_k
 
 
@@ -283,25 +285,25 @@ def grf_foreground_signal(type, size, sigma):
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angle_per_pixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
         return grf, mag_k
     if type == 2:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 57, 1.1, 2.07, 1.0, sigma)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angle_per_pixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
         return grf, mag_k
     if type == 3:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., sigma) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angle_per_pixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
         return grf, mag_k
     if type == 4:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., sigma) ** 0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angle_per_pixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
         return grf, mag_k
     if type == 5:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., sigma) ** 0.5 + noise1 *
@@ -310,7 +312,7 @@ def grf_foreground_signal(type, size, sigma):
                            foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5 + np.fft.fft2(stringwake_ps(patch_size,
                                                                                                wake_size_angle,
                                                                                                angle_per_pixel,
-                                                                                               shift_wake_angle))).real
+                                                                                               shift_wake_angle, True))).real
         return grf, mag_k
 
 
@@ -365,7 +367,7 @@ def chi_square(data_sample_real, magnitude_k, alpha, foreground_type, filter):
 
 
 def wien_filter(foreground_comp, k):
-    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle)))**2/patch_size**2
+    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle, False)))**2/patch_size**2
     pspec_noise = 0
     if foreground_comp == 0:
         pspec_noise = power_spectrum(k, power_law, sigma_noise)
@@ -383,7 +385,7 @@ def wien_filter(foreground_comp, k):
 
 
 def matched_filter(foreground_comp, k):
-    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle)))**2/patch_size**2
+    pspec_signal = np.abs(np.fft.fft2(stringwake_ps(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle, False)))**2/patch_size**2
     pspec_noise = 0
     if foreground_comp == 0:
         pspec_noise = power_spectrum(k, power_law, sigma_noise)
