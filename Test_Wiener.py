@@ -36,6 +36,9 @@ pspec = np.abs(ft_all)**2/N**2
 k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
 k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
 digi = np.digitize(mag_k, k_bins) - 1
+plt.imshow(digi)
+plt.colorbar()
+plt.show()
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]

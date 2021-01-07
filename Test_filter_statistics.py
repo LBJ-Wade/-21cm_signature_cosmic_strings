@@ -37,7 +37,10 @@ for j in range(0, len(chi2)):
     pspec_noise = power_spectrum(mag_k, 2, 1)
     wien_fn = pspec_signal / (pspec_noise + pspec_signal)
 
-    ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )#+ np.fft.fft2(signal))
+    ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + np.fft.fft2(signal))
+    print(ky)
+    plt.imshow(np.abs(ft))
+    plt.show()
     ft_filtered = ft * wien_fn
     ift_filtered = np.fft.ifft2(ft_filtered).real
 

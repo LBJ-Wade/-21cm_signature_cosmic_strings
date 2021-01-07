@@ -103,7 +103,7 @@ power_law = -2.0
 
 #wake properties
 wake_brightness = T_b* 1e3 #in mK
-wake_size_angle = 1 #in degree
+wake_size_angle = [1,1] #in degree
 shift_wake_angle = [0, 0]
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 theta1 = math.pi/4 #angle 1 in z-space
@@ -190,7 +190,7 @@ def stringwake_ps(size, anglewake, angleperpixel, shift, background_on):
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
-    wakesize_pixel = [int(np.round(np.cos(theta1)*anglewake/angleperpixel)), int(np.round(anglewake/angleperpixel))] #theta1 term added depending on the direction of rot
+    wakesize_pixel = [int(np.round(np.cos(theta1)*anglewake[0]/angleperpixel)), int(np.round(anglewake[1]/angleperpixel))] #theta1 term added depending on the direction of rot
     i_x = int(size/2.+shift_pixel[0]-wakesize_pixel[0]/2.)
     f_x = int(size/2.+shift_pixel[0]+wakesize_pixel[0]/2.+1)
     i_y = int(size/2.+shift_pixel[1]-wakesize_pixel[1]/2.)
