@@ -103,10 +103,10 @@ power_law = -2.0
 
 #wake properties
 wake_brightness = T_b* 1e3 #in mK
-wake_size_angle = [1,1] #in degree
+wake_size_angle = [1.,1.] #in degree
 shift_wake_angle = [0, 0]
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
-theta1 = math.pi/4 #angle 1 in z-space
+theta1 = math.pi*0.32 #angle 1 in z-space
 theta2 = 0 #angle 2 in z-space
 wake_thickness = (1.+z_i)**0.5/(1.+z_wake)**0.5 *(1.+z_wake) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5*2.*np.sin(theta1)**2/np.cos(theta1)
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
@@ -199,7 +199,7 @@ def stringwake_ps(size, anglewake, angleperpixel, shift, background_on):
     for i in range(i_x, f_x):#Todoo: make sure its an integer is not necessary because integer division
         for j in range(i_y, f_y):
             #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            patch[i, j] += 1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5) #in mK
+            patch[i, j] += (1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
     #print(str(patch[f_x-1,f_y-1])+ ' signal ')
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
