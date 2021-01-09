@@ -426,10 +426,10 @@ for l in range(0, N):
     out_signal = grf_foreground_signal(foreground, patch_size, 1)
     out_check = grf_foreground(foreground, patch_size, 1)
     out_2 = grf_foreground(foreground, patch_size, 1)
-    if l ==0:
-        plt.imshow(out_signal[0].real)
-        plt.colorbar()
-        plt.show()
+    #if l ==0:
+    #    plt.imshow(out_signal[0].real)
+    #    plt.colorbar()
+    #    plt.show()
     chi_list.append(chi_square(out_check[0], out_check[1], power_law, foreground, 0))
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], power_law, foreground, 0))
     chi_list2.append(chi_square(out_2[0], out_2[1], power_law, foreground, 1))

@@ -24,7 +24,7 @@ for a in range(206, 306):
         signal[a][b] = 0.1
 pspec_signal = np.abs(np.fft.fft2(signal))**2 / N ** 2
 
-n = 50
+n = 250
 sigma1 = 1
 bins = 300
 '''chi2 = np.zeros(n)
@@ -36,7 +36,7 @@ for j in range(0, len(threepoint_average)):
     kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
     mag_k = np.sqrt(kx**2 + ky**2)
     pspec_noise = power_spectrum(mag_k, 2, 1)
-    wien_fn = pspec_signal / (pspec_noise + pspec_signal)
+    #wien_fn = pspec_signal / (pspec_noise + pspec_signal)
     ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )#+ np.fft.fft2(signal))
     ft_ordered = np.zeros((N, N))
     for k in range(0, N/2):
@@ -64,7 +64,7 @@ for j in range(0, len(threepoint_average)):
     for k in range(0, N):
         for l in range(0, N):
             threepoint += ft_ordered[k][l]*ft_ordered[N-k-1][N-l-1]*ft_ordered[N-l-1][k]
-    threepoint_average[j]=threepoint
+    threepoint_average[j]=threepoint/N**2
     #print(threepoint/N**2)
     #print("...............")
 print(np.mean(threepoint_average))
