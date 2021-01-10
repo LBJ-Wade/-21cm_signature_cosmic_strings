@@ -14,6 +14,8 @@ import scipy.integrate as integrate
 #define constants according to arXiv: 1006.2514v3
 #according to The Astrophysical Journal, 622:1356-1362, 2005 April 1, Table 2. Units [cm^3 s^-1]
 def deexitation_crosssection(t_k):
+    if t_k < 1:
+        return 1.38e-13
     if 1 < t_k and t_k <= 2:
         return 1.38e-13 + (t_k - 1) * (1.43 - 1.38) * 1e-13
     if 2 < t_k and t_k <= 4:
@@ -67,17 +69,19 @@ print('Therefore, dz = '+ str(delta_z)+' and we cover ['+ str(z)+', '+ str(z+del
 #redshift of center of wake
 z_wake = z+delta_z/2
 #string tension in units of [10^-6]
-gmu_6 = 0.3
+gmu_6 = 0.4
 #string speed
 vsgammas_square = 1./3
 #temperature of HI atoms inside the wake [K]
 T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
+print(T_K)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
 xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+print(xc)
 #wake brightness temperature [K]
 T_b = 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
@@ -111,6 +115,10 @@ theta2 = 0 #angle 2 in z-space
 wake_thickness = (1.+z_i)**0.5/(1.+z_wake)**0.5 *(1.+z_wake) * 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5*2.*np.sin(theta1)**2/np.cos(theta1)
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
+delta_z = 2*wake_thickness
+print('The redshift bin thickness is '+str(delta_z))
+
+
 
 
 '''Section 2: We define functions that define our signal, and the gausian random field'''
