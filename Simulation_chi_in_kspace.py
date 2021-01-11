@@ -6,6 +6,7 @@ with Prof. Robert Brandenberger'''
 
 import numpy as np
 import math
+import PyCosmo
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
 
@@ -69,19 +70,17 @@ print('Therefore, dz = '+ str(delta_z)+' and we cover ['+ str(z)+', '+ str(z+del
 #redshift of center of wake
 z_wake = z+delta_z/2
 #string tension in units of [10^-6]
-gmu_6 = 0.4
+gmu_6 = 0.3
 #string speed
 vsgammas_square = 1./3
 #temperature of HI atoms inside the wake [K]
 T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
-print(T_K)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
 xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
-print(xc)
 #wake brightness temperature [K]
 T_b = 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
@@ -129,6 +128,12 @@ def power_spectrum(k, alpha=-2., sigma=1.):
     out = k**alpha * 1/sigma**2
     out[k < 0.01] =  (0.01) ** alpha
     return out
+
+
+#following arXiv:1401.2095
+#def LCDM_ps(k):
+
+
 
 
 #deep21 arXiv:2010.15843       A  beta  alpha Xi   type
