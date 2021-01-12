@@ -10,7 +10,8 @@ import math
 patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
-c = 2 * math.pi * angle_per_pixel
+wake_size = [1.,1.]
+c =  angle_per_pixel
 N = 512
 
 
@@ -22,14 +23,31 @@ def power_spectrum(k, alpha=2., sigma=1.):
 
 bins = 300
 grf = np.random.normal(0, 1, (N, N))
-kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
+kx, ky = np.meshgrid(2 * math.pi *np.fft.fftfreq(N, c), 2 * math.pi *np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx**2 + ky**2)
 signal = np.zeros((N, N))
 for i in range(306, 407):
     for j in range(306, 407):
         signal[i][j] = 0.2
-'''ft_signal_square = 0.25 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx * np.floor(1. * 1/angle_per_pixel)) *
-                    np.sin(math.pi * ky * np.floor(1. * 1/angle_per_pixel)))**2'''
+kx[0][0]=0.001
+for i in range(0,N):
+    ky[0][i]=0.001
+for i in range(0,N):
+    kx[i][0]=0.001
+ft_signal_square = 0.2 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx *wake_size[0]) *
+                    np.sin(math.pi * ky *wake_size[1]))
+'''
+for i in range(0, N):
+    ft_signal_square[0][i]=0.2 * 1. * 1/(math.pi * kx) *  np.sin(math.pi * ky *1.)
+for j in range(0,N):
+    ft_signal_square[0][i] = 0.2 * 1. * 1 / (math.pi * kx) * np.sin(math.pi * ky * 1.)'''
+print(kx)
+plt.imshow(np.abs(ft_signal_square))
+plt.colorbar()
+plt.show()
+plt.imshow(np.abs(np.fft.fft2(signal)))
+plt.colorbar()
+plt.show()
 grf_w_power_spec_noise = np.fft.ifft2(np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal))
 ft_all = (np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal))
 pspec = np.abs(ft_all)**2/N**2

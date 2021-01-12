@@ -21,10 +21,10 @@ def power_spectrum(k, alpha=2, sigma=1.):
 signal = np.zeros((N, N))
 for a in range(206, 306):
     for b in range(206, 306):
-        signal[a][b] = 0.01
+        signal[a][b] = 0.1
 pspec_signal = np.abs(np.fft.fft2(signal))**2 / N ** 2
 
-n = 100
+n = 1000
 sigma1 = 1
 bins = 300
 '''chi2 = np.zeros(n)
@@ -41,24 +41,24 @@ for j in range(0, len(threepoint_average)):
     #wien_fn = pspec_signal / (pspec_noise + pspec_signal)
     ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )#+ np.fft.fft2(signal))
     ft_signal = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + np.fft.fft2(signal))
-    ft_ordered = np.array(np.zeros((N, N)),dtype=complex)
-    ft_ordered_signal = np.array(np.zeros((N, N)),dtype=complex)
-    for k in range(0, N/2):
-        for l in range(0, N/2):
-            ft_ordered[-k+N/2-1][l+N/2] = ft[k][l]
-            ft_ordered_signal[-k + N / 2 - 1][l + N / 2] = ft_signal[k][l]
-    for k in range(0, N/2):
-        for l in range(N/2, N):
-            ft_ordered[-k+N/2-1][l-N/2] = ft[k][l]
-            ft_ordered_signal[-k + N / 2 - 1][l - N / 2] = ft_signal[k][l]
-    for k in range(N/2, N):
-        for l in range(0, N/2):
-            ft_ordered[N-(k-N/2)-1][l+N/2] = ft[k][l]
-            ft_ordered_signal[N - (k - N / 2) - 1][l + N / 2] = ft_signal[k][l]
-    for k in range(N/2, N):
-        for l in range(N/2, N):
-            ft_ordered[N-(k-N/2)-1][l-N/2] = ft[k][l]
-            ft_ordered_signal[N - (k - N / 2) - 1][l - N / 2] = ft_signal[k][l]
+    ft_ordered = np.array(np.zeros((N, N)), dtype=complex)
+    ft_ordered_signal = np.array(np.zeros((N, N)), dtype=complex)
+    for k in range(0, int(N/2)):
+        for l in range(0, int(N/2)):
+            ft_ordered[-k+int(N/2)-1][l+int(N/2)] = ft[k][l]
+            ft_ordered_signal[-k + int(N/2) - 1][l + int(N/2)] = ft_signal[k][l]
+    for k in range(0, int(N/2)):
+        for l in range(int(N/2), N):
+            ft_ordered[-k+int(N/2)-1][l-int(N/2)] = ft[k][l]
+            ft_ordered_signal[-k + int(N/2) - 1][l - int(N/2)] = ft_signal[k][l]
+    for k in range(int(N/2), N):
+        for l in range(0, int(N/2)):
+            ft_ordered[N-(k-int(N/2))-1][l+int(N/2)] = ft[k][l]
+            ft_ordered_signal[N - (k - int(N/2)) - 1][l + int(N/2)] = ft_signal[k][l]
+    for k in range(int(N/2), N):
+        for l in range(int(N/2), N):
+            ft_ordered[N-(k-int(N/2))-1][l-int(N/2)] = ft[k][l]
+            ft_ordered_signal[N - (k - int(N/2)) - 1][l - int(N/2)] = ft_signal[k][l]
     '''print(ft_ordered.min())
     print(np.abs(ft).min())
     plt.imshow(np.abs(ft_ordered))
@@ -76,12 +76,12 @@ for j in range(0, len(threepoint_average)):
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k - 1][N - l - 1] * ft_ordered_signal[N - l - 1][k]
     threepoint_average[j]=threepoint/N**2
     threepoint_average_signal[j] = threepoint_signal/ N ** 2
-    #print(threepoint/N**2)
-    #print("...............")
-print(np.mean(threepoint_average))
-print(np.abs(np.mean(threepoint_average)-np.mean(threepoint_average_signal)))
-
-
+print(np.abs(np.mean(threepoint_average_signal))/np.abs(np.mean(threepoint_average)))
+print(np.abs(np.mean(threepoint_average)))
+print(np.abs(np.mean(threepoint_average_signal)))
+'''plt.hist(threepoint_average, bins=40)
+plt.hist(threepoint_average_signal, bins=40)
+plt.show()'''
 
 
 
