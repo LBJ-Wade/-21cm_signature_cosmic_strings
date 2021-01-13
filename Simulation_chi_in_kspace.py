@@ -464,6 +464,10 @@ def matched_filter(foreground_comp, k, fft_s):
 #    chi_list.append(chi_square(out[0], out[1], power_law, 1, 0.4))
 #print(np.mean(chi_list))
 
+
+
+
+
 #calculate the DELTAchi^2 for N datasambles in Fourier space
 r_z = cosmo.background.dist_rad_a(1/(1+z_wake))
 mpc_per_pixel = angle_per_pixel * r_z * math.pi/180.
@@ -473,6 +477,10 @@ kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, mpc_per_pixel ),
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 plt.loglog(np.logspace(-3, 1), LCDM_ps(np.logspace(-3,1)))
 plt.show()
+
+
+
+
 N = 100
 foreground = 1
 chi_list_signal = []

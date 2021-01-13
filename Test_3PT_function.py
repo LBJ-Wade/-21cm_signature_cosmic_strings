@@ -10,7 +10,7 @@ import math
 patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
-c = 2 * math.pi * angle_per_pixel
+c = angle_per_pixel
 N = 512
 def power_spectrum(k, alpha=2, sigma=1.):
     out = 1 / k ** alpha * 1 / sigma ** 2
@@ -25,7 +25,6 @@ for a in range(206, 306):
 pspec_signal = np.abs(np.fft.fft2(signal))**2 / N ** 2
 
 n = 1000
-sigma1 = 1
 bins = 300
 '''chi2 = np.zeros(n)
 chi2_check = np.zeros(n)
@@ -33,14 +32,21 @@ chi2_real = np.zeros(n)'''
 threepoint_average = np.array(np.zeros(n), dtype=complex)
 threepoint_average_signal = np.array(np.zeros(n), dtype=complex)
 for j in range(0, len(threepoint_average)):
-    grf = np.random.normal(0, sigma1, (N, N))
+    grf = np.random.normal(0, 1, (N, N))
     #grf2 = np.random.normal(0, sigma1, (N, N))
-    kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
+    kx, ky = np.meshgrid(2 * math.pi *np.fft.fftfreq(N, c), 2 * math.pi * np.fft.fftfreq(N, c))
     mag_k = np.sqrt(kx**2 + ky**2)
     pspec_noise = power_spectrum(mag_k, 2, 1)
+    for i in range(0, N):
+        ky[0][i] = 0.001
+    for i in range(0, N):
+        kx[i][0] = 0.001
+    ft_sig = 0.1 * (
+            1 / (math.pi * kx) * 1 / (math.pi * ky) * np.sin(math.pi * kx * 1.) *
+            np.sin(math.pi * ky * 1.))
     #wien_fn = pspec_signal / (pspec_noise + pspec_signal)
-    ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )#+ np.fft.fft2(signal))
-    ft_signal = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + np.fft.fft2(signal))
+    ft_signal = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + ft_sig)
+    ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5)#+ ft_signal)
     ft_ordered = np.array(np.zeros((N, N)), dtype=complex)
     ft_ordered_signal = np.array(np.zeros((N, N)), dtype=complex)
     for k in range(0, int(N/2)):
@@ -67,7 +73,9 @@ for j in range(0, len(threepoint_average)):
     plt.imshow(ft)
     plt.colorbar()
     plt.show()''' #test successful reordered
-
+    #plt.imshow(np.abs(ft_ordered_signal))
+    #plt.colorbar()
+    #plt.show()
     threepoint = 0
     threepoint_signal = 0
     for k in range(0, N):
@@ -76,7 +84,7 @@ for j in range(0, len(threepoint_average)):
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k - 1][N - l - 1] * ft_ordered_signal[N - l - 1][k]
     threepoint_average[j]=threepoint/N**2
     threepoint_average_signal[j] = threepoint_signal/ N ** 2
-print(np.abs(np.mean(threepoint_average_signal))/np.abs(np.mean(threepoint_average)))
+#print(np.abs(np.mean(threepoint_average_signal))/np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average_signal)))
 '''plt.hist(threepoint_average, bins=40)
