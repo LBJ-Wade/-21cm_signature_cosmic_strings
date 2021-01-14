@@ -46,7 +46,7 @@ def sort_ft(field):
     return dummy
 
 
-def multiprocessing_fun(j, threepoint_average):
+def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i):
     np.random.seed(j)
     grf = np.random.normal(0, 1, (N, N))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c), 2 * math.pi * np.fft.fftfreq(N, c))
@@ -67,14 +67,15 @@ def multiprocessing_fun(j, threepoint_average):
             threepoint += ft_ordered[k][l] * ft_ordered[N - k - 1][N - l - 1] * ft_ordered[N - l - 1][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k - 1][N - l - 1] * \
                                  ft_ordered_signal[N - l - 1][k]
-    threepoint_average[j] = threepoint / N ** 2
-    print(threepoint/N**2)
-    print(threepoint_average[j])
+    threepoint_average_r[j] = (threepoint / N ** 2).real
+    threepoint_average_i[j] = (threepoint / N ** 2).imag
+
     threepoint_average_signal[j] = threepoint_signal / N ** 2
 
 def combine_complex(a,b):
-    global thhree_point_average
-    for i in range(0,len(threepoint_average)):
+    global threepoint_average
+    for i in range(0, len(threepoint_average)):
+        threepoint_average[i]=a[i]+1j*b[i]
 
 
 
@@ -82,12 +83,12 @@ n = 10
 bins = 300
 
 threepoint_average_r = multiprocessing.Array('d',range(n))
-threepoint_average_r = multiprocessing.Array('d',range(n))
+threepoint_average_i = multiprocessing.Array('d',range(n))
 threepoint_average = np.array(np.zeros(n), dtype=complex)
 threepoint_average_signal = np.array(np.zeros(n), dtype=complex)
 processes = []
 for i in range(0, n):
-    p = multiprocessing.Process(target=multiprocessing_fun, args=(i, threepoint_average_r))
+    p = multiprocessing.Process(target=multiprocessing_fun, args=(i, threepoint_average_r, threepoint_average_i))
     processes.append(p)
     p.start()
 for process in processes:
