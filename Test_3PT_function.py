@@ -21,7 +21,7 @@ def power_spectrum(k, alpha=2, sigma=1.):
 
 
 def signal_ft(k1, k2):
-    return 0.1 * (
+    return 1 * (
             1 / (math.pi * k1) * 1 / (math.pi * k2) * np.sin(math.pi * k1 * 1.) *
             np.sin(math.pi * k2 * 1.))
 
@@ -57,7 +57,7 @@ for j in range(0, len(threepoint_average)):
     for i in range(0, N):
         kx[i][0] = 0.001
     ft_sig = signal_ft(kx , ky)
-    ft_signal = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + ft_sig)
+    ft_signal = ( ft_sig)
     ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5)
     ft_ordered = sort_ft(ft)
     ft_ordered_signal = sort_ft(ft_signal)
@@ -68,7 +68,6 @@ for j in range(0, len(threepoint_average)):
             threepoint += ft_ordered[k][l]*ft_ordered[N-k-1][N-l-1]*ft_ordered[N-l-1][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k - 1][N - l - 1] * ft_ordered_signal[N - l - 1][k]
     threepoint_average[j] = threepoint/N**2
-    print(threepoint/N**2)
     threepoint_average_signal[j] = threepoint_signal/ N ** 2
 print(np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average_signal)))
