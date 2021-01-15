@@ -94,7 +94,7 @@ T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0
 #define quantities of noise and the patch of the sky
 #patch properties
 patch_size = 512
-patch_angle = 5. #in degree
+patch_angle = 3.5 #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
@@ -468,7 +468,7 @@ def matched_filter(foreground_comp, k, fft_s):
 
 
 
-#calculate the DELTAchi^2 for N datasambles in Fourier space
+'''
 r_z = cosmo.background.dist_rad_a(1/(1+z_wake))
 mpc_per_pixel = angle_per_pixel * r_z * math.pi/180.
 #transform k from degree^-1 in Mpc^-1 following arXiv: 1405.1452
@@ -476,11 +476,12 @@ kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, mpc_per_pixel ),
                          2 * math.pi * np.fft.fftfreq(patch_size, mpc_per_pixel))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 plt.loglog(np.logspace(-3, 1), LCDM_ps(np.logspace(-3,1)))
-plt.show()
+plt.show()'''
 
 
 
 
+#calculate the DELTAchi^2 for N datasambles in Fourier space
 N = 100
 foreground = 1
 chi_list_signal = []

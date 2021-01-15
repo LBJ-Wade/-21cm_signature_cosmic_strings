@@ -83,16 +83,17 @@ def combine_complex(a, b):
 
 
 
-n = 10000
-parts = 20
+n = 100
+parts = 10
 bins = 300
 
-threepoint_average_r = multiprocessing.Array('d', range(int(n/parts)))
-threepoint_average_i = multiprocessing.Array('d', range(int(n/parts)))
-threepoint_average_signal_r = multiprocessing.Array('d', range(int(n/parts)))
-threepoint_average_signal_i = multiprocessing.Array('d', range(int(n/parts)))
-threepoint_average = np.array(np.zeros(n), dtype=complex)
-threepoint_average_signal = np.array(np.zeros(n), dtype=complex)
+threepoint_average_r = multiprocessing.Array('d', range(n))
+threepoint_average_i = multiprocessing.Array('d', range(n))
+threepoint_average_signal_r = multiprocessing.Array('d', range(n))
+threepoint_average_signal_i = multiprocessing.Array('d', range(n))
+
+threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
+threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):
     processes = []
     for i in range(int(k*n/parts), int((k+1)*n/parts)):
@@ -101,18 +102,18 @@ for k in range(0, parts):
         p.start()
     for process in processes:
         process.join()
-    for m in range(int(k*n/parts), int((k+1)*n/parts)):
-        threepoint_average[m] = combine_complex(np.array(threepoint_average_r), np.array(threepoint_average_i))
-        threepoint_average_signal[m] = combine_complex(np.array(threepoint_average_signal_r), np.array(threepoint_average_signal_i))
     for process in processes:
         process.terminate()
     del processes
+threepoint_average = combine_complex(np.array(threepoint_average_r), np.array(threepoint_average_i))
+threepoint_average_signal = combine_complex(np.array(threepoint_average_signal_r), np.array(threepoint_average_signal_i))
+print(threepoint_average)
 print(np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average_signal)))
-plt.hist(threepoint_average.real, range=(-10000, 10000), bins=100)
+plt.hist(np.array(threepoint_average).real, range=(-10000, 10000), bins=100)
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
-plt.hist(threepoint_average_signal.real,range = (-10000,10000), bins=100)
+plt.hist(np.array(threepoint_average_signal).real,range = (-10000, 10000), bins=100)
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 
