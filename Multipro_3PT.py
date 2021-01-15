@@ -8,6 +8,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import math
 import multiprocessing
+import warnings
 
 patch_size = 512
 patch_angle = 5. #in degree
@@ -17,13 +18,14 @@ N = 512
 
 
 def power_spectrum(k, alpha=2, sigma=1.):
+    warnings.filterwarnings("ignore")
     out = 1 / k ** alpha * 1 / sigma ** 2
     out[k < 0.01] = 1 / (0.01) ** alpha
     return out
 
 
 def signal_ft(k1, k2):
-    return 0.1 * (
+    return 0.1* (
             1 / (math.pi * k1) * 1 / (math.pi * k2) * np.sin(math.pi * k1 * 1.) *
             np.sin(math.pi * k2 * 1.))
 
@@ -56,7 +58,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     for i in range(0, N):
         kx[i][0] = 0.001
     ft_sig = signal_ft(kx, ky)
-    ft_signal = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 + ft_sig)
+    ft_signal = ( ft_sig +np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )
     ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5)
     ft_ordered = sort_ft(ft)
     ft_ordered_signal = sort_ft(ft_signal)
@@ -81,32 +83,36 @@ def combine_complex(a, b):
 
 
 
-n = 100
+n = 10000
+parts = 20
 bins = 300
 
-threepoint_average_r = multiprocessing.Array('d', range(n))
-threepoint_average_i = multiprocessing.Array('d', range(n))
-threepoint_average_signal_r = multiprocessing.Array('d', range(n))
-threepoint_average_signal_i = multiprocessing.Array('d', range(n))
+threepoint_average_r = multiprocessing.Array('d', range(int(n/parts)))
+threepoint_average_i = multiprocessing.Array('d', range(int(n/parts)))
+threepoint_average_signal_r = multiprocessing.Array('d', range(int(n/parts)))
+threepoint_average_signal_i = multiprocessing.Array('d', range(int(n/parts)))
 threepoint_average = np.array(np.zeros(n), dtype=complex)
 threepoint_average_signal = np.array(np.zeros(n), dtype=complex)
-processes = []
-for i in range(0, n):
-    p = multiprocessing.Process(target=multiprocessing_fun, args=(i, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i))
-    processes.append(p)
-    p.start()
-for process in processes:
-    process.join()
-
-
-threepoint_average = combine_complex(np.array(threepoint_average_r), np.array(threepoint_average_i))
-threepoint_average_signal = combine_complex(np.array(threepoint_average_signal_r), np.array(threepoint_average_signal_i))
+for k in range(0, parts):
+    processes = []
+    for i in range(int(k*n/parts), int((k+1)*n/parts)):
+        p = multiprocessing.Process(target=multiprocessing_fun, args=(i, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i))
+        processes.append(p)
+        p.start()
+    for process in processes:
+        process.join()
+    for m in range(int(k*n/parts), int((k+1)*n/parts)):
+        threepoint_average[m] = combine_complex(np.array(threepoint_average_r), np.array(threepoint_average_i))
+        threepoint_average_signal[m] = combine_complex(np.array(threepoint_average_signal_r), np.array(threepoint_average_signal_i))
+    for process in processes:
+        process.terminate()
+    del processes
 print(np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average_signal)))
-plt.hist(threepoint_average.real, bins=80)
+plt.hist(threepoint_average.real, range=(-10000, 10000), bins=100)
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
-plt.hist(threepoint_average_signal.real, bins=80)
+plt.hist(threepoint_average_signal.real,range = (-10000,10000), bins=100)
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 

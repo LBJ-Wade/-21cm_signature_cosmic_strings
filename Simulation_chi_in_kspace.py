@@ -156,7 +156,7 @@ def instrumental_ps(): #TODO: Implement as additional Gaussian  noise
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure*1e-5
+    A = A_pure*1e-6
     vref = 130.  # MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -253,7 +253,7 @@ def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
     for i in range(0, size):
         kx[i][0] = 0.001
     ft_signal = wake_thickness * T_b * (
-                1 / (math.pi * kx) * 1 / (math.pi * ky) * np.sin(math.pi * kx * wake_size_angle[0]) *
+                1 / (math.pi * kx * 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     return grf, mag_k, ft_signal
 
@@ -269,7 +269,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = wake_thickness* T_b * (1 / (math.pi * kx) * 1 / (math.pi * ky) * np.sin(math.pi * kx * wake_size_angle[0]) *
+    ft_signal = wake_thickness* T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                                np.sin(math.pi * ky * wake_size_angle[1]))
 
     grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha, sigma) ** 0.5 + ft_signal).real#np.fft.fft2(stringwake_ps(patch_size,
@@ -294,7 +294,7 @@ def grf_foreground(type, size, sigma):
     for i in range(0, size):
         kx[i][0] = 0.001
     ft_signal = wake_thickness * T_b * (
-                1 / (math.pi * kx) * 1 / (math.pi * ky) * np.sin(math.pi * kx * wake_size_angle[0]) *
+                1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     if type == 1:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5).real
@@ -331,7 +331,7 @@ def grf_foreground_signal(type, size, sigma):
     for i in range(0, size):
         kx[i][0] = 0.001
     ft_signal = wake_thickness * T_b * (
-                1 / (math.pi * kx) * 1 / (math.pi * ky) * np.sin(math.pi * kx * wake_size_angle[0]) *
+                1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     if type == 1:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5 + ft_signal).real#np.fft.fft2(stringwake_ps(patch_size,
