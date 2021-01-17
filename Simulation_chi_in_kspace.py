@@ -141,7 +141,7 @@ def ps(k, l):
 
 
 def multi_fn(j, dummy):
-    dummy[j] = T_back2**2 * 1/(math.pi * cosmo.background.dist_rad_a(1/(1+z)) * cosmo.background.dist_rad_a(1/(1+z+delta_z)) ) * integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1/(1+z)) - cosmo.background.dist_rad_a(1/(1+z+delta_z)))*k) * ps(k, j), 0, 20)[0]
+    dummy[j] = T_back2**2 * 1/(math.pi * cosmo.background.dist_rad_a(1/(1+z)) * cosmo.background.dist_rad_a(1/(1+z+delta_z)) ) * integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1/(1+z)) - cosmo.background.dist_rad_a(1/(1+z+delta_z)))*k) * ps(k, j), 0, 50)[0]
 
 
 def angular_ps(l_max):
@@ -465,7 +465,8 @@ def chi_square(data_sample_real, magnitude_k, fft_signal, alpha, foreground_type
                                  foreground_power_spectrum(k_bin_cents, 57, 1.1, 2.07, 1.0, 1)*bins +
                                  foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15, 32., 1)*bins +
                                  foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 35., 1)*bins))
-
+    if foreground_type == 6:
+        return np.sum(binned_ps / (ps_LCDM * bins))
 
 '''Section 3.2: define the filter funcitons'''
 
@@ -485,6 +486,8 @@ def wien_filter(foreground_comp, k, fft_s):
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    if foreground_comp == 6:
+        pspec_noise = ps_LCDM
     return pspec_noise, pspec_signal/(pspec_noise + pspec_signal)
 
 
@@ -503,6 +506,8 @@ def matched_filter(foreground_comp, k, fft_s):
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+    if foreground_comp == 6:
+        pspec_noise = ps_LCDM
     return pspec_noise, pspec_signal/pspec_noise
 
 
@@ -522,8 +527,7 @@ def matched_filter(foreground_comp, k, fft_s):
 kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel),
                          2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
-init_angular = angular_ps(180*mag_k.max()/math.pi+1)
-np.save('angular_ps_30', init_angular)
+init_angular = angular_ps(180*mag_k.max()/math.pi+1)                #critical
 ps_LCDM = def_ang_ps(mag_k, init_angular)
 for i in range(0, patch_size):
     ky[0][i] = 0.001
@@ -533,8 +537,7 @@ ft_signal = wake_thickness * T_b * (
         1 / (math.pi * kx * 180. / math.pi) * 1 / (math.pi * ky * 180. / math.pi) * np.sin(
     math.pi * kx * wake_size_angle[0]) *
         np.sin(math.pi * ky * wake_size_angle[1]))
-
-K = 1000
+K = 100
 chi_list_signal = []
 chi_list = []
 #check, if the result is achieved by random fluctuations
@@ -543,13 +546,22 @@ chi_list2 = []
 chi_filtered = []
 for l in range(0, K):
     #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
-    out_signal = grf_foreground_signal(foreground, patch_size, 1)
-    out_check = grf_foreground(foreground, patch_size, 1)
-    out_2 = grf_foreground(foreground, patch_size, 1)
-    chi_list.append(chi_square(out_check[0], out_check[1], out_check[2], power_law, foreground, 0))
-    chi_list_signal.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 0))
-    chi_list2.append(chi_square(out_2[0], out_2[1], out_2[2], power_law, foreground, 1))
-    chi_filtered.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 1))
+    #return grf, mag_k, ft_signal
+    grf = np.fft.ifft2(np.fft.fft2(np.random.normal(0, 1, size=(patch_size, patch_size))) * ps_LCDM ** 0.5).real
+    grf2 = np.fft.ifft2(np.fft.fft2(np.random.normal(0, 1, size=(patch_size, patch_size))) * ps_LCDM ** 0.5).real
+    grf_with_signal = np.fft.ifft2(np.fft.fft2(np.random.normal(0, 1, size=(patch_size, patch_size))) * ps_LCDM ** 0.5 + ft_signal).real
+    chi_list.append(chi_square(grf, mag_k, ft_signal, power_law, 6, 0))
+    chi_list_signal.append(chi_square(grf_with_signal, mag_k, ft_signal, power_law, 6, 0))
+    chi_list2.append(chi_square(grf2, mag_k, ft_signal, power_law, 6, 1))
+    chi_filtered.append(chi_square(grf_with_signal, mag_k, ft_signal, power_law, 6, 1))
+print('LCDM-noise check, with no removal!!!')
+print('For without signal: ' + str(np.mean(chi_list)))
+print('For with signal: ' + str(np.mean(chi_list_signal)))
+print('For without signal and filtered: ' + str(np.mean(chi_list2)))
+print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
+print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
+print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
+print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
 
 
 
@@ -583,6 +595,8 @@ print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
 print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
 print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
 print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
+
+
 
 '''out = grf_foreground_signal(1, patch_size, 1)
 
