@@ -9,6 +9,7 @@ import math
 import PyCosmo as pyco
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
+import multiprocessing
 cosmo = pyco.Cosmo()
 cosmo.set(pk_type = 'BBKS')
 
@@ -94,7 +95,7 @@ T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0
 #define quantities of noise and the patch of the sky
 #patch properties
 patch_size = 512
-patch_angle = 3.5 #in degree
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 #Gaussian noise properties, alpha noise according to arXiv:2010.15843
 alpha_noise = 0.0475
@@ -133,14 +134,61 @@ def power_spectrum(k, alpha=-2., sigma=1.):
     out[k < 0.01] =  (0.01) ** alpha
     return out
 
+'''LCDM POWER SPECTRUM'''
 
-#following arXiv:1401.2095
-def LCDM_ps(k_):
-    #calculate P(k)
-    mu_square_f = 0 # mu= k||/k, f= Omega_M **0.55 -> taking this to be zero (in case its not) gives an error of O(1)
-    #note: the delta_z**2 results from the integration over the redshift bin.
-    return cosmo.lin_pert.powerspec_a_k(a=1, k=k_)*delta_z**2*T_back2**2*(1+mu_square_f)**2
+def ps(k, l):
+    return cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
 
+
+def multi_fn(j, dummy):
+    dummy[j] = T_back2**2 * 1/(math.pi * cosmo.background.dist_rad_a(1/(1+z)) * cosmo.background.dist_rad_a(1/(1+z+delta_z)) ) * integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1/(1+z)) - cosmo.background.dist_rad_a(1/(1+z+delta_z)))*k) * ps(k, j), 0, 20)[0]
+
+
+def angular_ps(l_max):
+    dummy = multiprocessing.Array('d', int(l_max)+1)
+    for k in range(0, int((l_max+1)/1000)):
+        processes = []
+        for i in range(k*1000, (k+1)*1000):
+            p = multiprocessing.Process(target=multi_fn, args=(i, dummy))
+            processes.append(p)
+            p.start()
+        for process in processes:
+            process.join()
+        for process in processes:
+            process.terminate()
+        del processes
+    processes = []
+    for i in range(int((l_max+1)/1000) * 1000, int(l_max)+1):
+        p = multiprocessing.Process(target=multi_fn, args=(i, dummy))
+        processes.append(p)
+        p.start()
+    for process in processes:
+        process.join()
+    for process in processes:
+        process.terminate()
+    del processes
+
+    return np.array(dummy)
+
+
+def def_ang_ps(k, init_angular):
+    ps_CDM = np.zeros((len(k[1]), len(k[1])))
+    for i in range(0, len(k[1])):
+        for j in range(0, len(k[1])):
+            l = 360 * k[i][j] / (2 * math.pi)
+            l_bottom = math.floor(l)
+            l_top = l_bottom + 1
+            delta_l = l - l_bottom
+            if l_bottom == 0:
+                if l < 0.01:
+                    ps_CDM[i][j] = init_angular[0]
+                else:
+                    ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+            else:
+                ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+    return ps_CDM
+
+'''######################'''
 
 def instrumental_ps(): #TODO: Implement as additional Gaussian  noise
     #TODO: Blow of implementieren
@@ -255,6 +303,7 @@ def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
     ft_signal = wake_thickness * T_b * (
                 1 / (math.pi * kx * 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
+    ft_signal = ft_signal+T_back
     return grf, mag_k, ft_signal
 
 
@@ -271,6 +320,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
         kx[i][0] = 0.001
     ft_signal = wake_thickness* T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                                np.sin(math.pi * ky * wake_size_angle[1]))
+    ft_signal = ft_signal + T_back
 
     grf = np.fft.ifft2(noise * power_spectrum(mag_k, alpha, sigma) ** 0.5 + ft_signal).real#np.fft.fft2(stringwake_ps(patch_size,
                                                                                            #    wake_size_angle,
@@ -296,6 +346,7 @@ def grf_foreground(type, size, sigma):
     ft_signal = wake_thickness * T_b * (
                 1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
+    ft_signal = ft_signal + T_back
     if type == 1:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5).real
         return grf, mag_k, ft_signal
@@ -333,6 +384,7 @@ def grf_foreground_signal(type, size, sigma):
     ft_signal = wake_thickness * T_b * (
                 1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
+    ft_signal = ft_signal + T_back
     if type == 1:
         grf = np.fft.ifft2(noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5 + ft_signal).real#np.fft.fft2(stringwake_ps(patch_size,
                                                                                            #    wake_size_angle,
@@ -466,17 +518,38 @@ def matched_filter(foreground_comp, k, fft_s):
 
 
 
-
-
-'''
-r_z = cosmo.background.dist_rad_a(1/(1+z_wake))
-mpc_per_pixel = angle_per_pixel * r_z * math.pi/180.
-#transform k from degree^-1 in Mpc^-1 following arXiv: 1405.1452
-kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, mpc_per_pixel ),
-                         2 * math.pi * np.fft.fftfreq(patch_size, mpc_per_pixel))
+#calculate chi^2 for LCDM-noise
+kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel),
+                         2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
-plt.loglog(np.logspace(-3, 1), LCDM_ps(np.logspace(-3,1)))
-plt.show()'''
+init_angular = angular_ps(180*mag_k.max()/math.pi+1)
+np.save('angular_ps_30', init_angular)
+ps_LCDM = def_ang_ps(mag_k, init_angular)
+for i in range(0, patch_size):
+    ky[0][i] = 0.001
+for i in range(0, patch_size):
+    kx[i][0] = 0.001
+ft_signal = wake_thickness * T_b * (
+        1 / (math.pi * kx * 180. / math.pi) * 1 / (math.pi * ky * 180. / math.pi) * np.sin(
+    math.pi * kx * wake_size_angle[0]) *
+        np.sin(math.pi * ky * wake_size_angle[1]))
+
+K = 1000
+chi_list_signal = []
+chi_list = []
+#check, if the result is achieved by random fluctuations
+chi_list2 = []
+#check for improvement via filtration
+chi_filtered = []
+for l in range(0, K):
+    #out = gaussian_random_field(size=patch_size, sigma=sigma_noise, mean=mean_noise, alpha=power_law)
+    out_signal = grf_foreground_signal(foreground, patch_size, 1)
+    out_check = grf_foreground(foreground, patch_size, 1)
+    out_2 = grf_foreground(foreground, patch_size, 1)
+    chi_list.append(chi_square(out_check[0], out_check[1], out_check[2], power_law, foreground, 0))
+    chi_list_signal.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 0))
+    chi_list2.append(chi_square(out_2[0], out_2[1], out_2[2], power_law, foreground, 1))
+    chi_filtered.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 1))
 
 
 
@@ -495,20 +568,18 @@ for l in range(0, N):
     out_signal = grf_foreground_signal(foreground, patch_size, 1)
     out_check = grf_foreground(foreground, patch_size, 1)
     out_2 = grf_foreground(foreground, patch_size, 1)
-    if l ==0:
-        plt.imshow(out_signal[0].real)
-        plt.colorbar()
-        plt.show()
+    #if l ==0:
+    #    plt.imshow(out_signal[0].real)
+    #    plt.colorbar()
+    #    plt.show()
     chi_list.append(chi_square(out_check[0], out_check[1], out_check[2], power_law, foreground, 0))
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 0))
     chi_list2.append(chi_square(out_2[0], out_2[1], out_2[2], power_law, foreground, 1))
     chi_filtered.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 1))
 print('For without signal: ' + str(np.mean(chi_list)))
-#print('For 2nd without signal: ' + str(np.mean(chi_list_check)))
 print('For with signal: ' + str(np.mean(chi_list_signal)))
 print('For without signal and filtered: ' + str(np.mean(chi_list2)))
 print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
-#print('For a treatment without string signal we get delta chi^2 = ' + str(np.abs(np.mean(chi_list_check)-np.mean(chi_list))))
 print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
 print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
 print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
