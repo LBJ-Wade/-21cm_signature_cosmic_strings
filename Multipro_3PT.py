@@ -3,7 +3,6 @@
 
 # In[8]:
 
-import time
 import numpy as np
 import matplotlib.pyplot as plt
 import math
@@ -25,7 +24,7 @@ def power_spectrum(k, alpha=2, sigma=1.):
 
 
 def signal_ft(k1, k2):
-    return 0.1* (
+    return 100* (
             1 / (math.pi * k1) * 1 / (math.pi * k2) * np.sin(math.pi * k1 * 1.) *
             np.sin(math.pi * k2 * 1.))
 
@@ -50,7 +49,7 @@ def sort_ft(field):
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i):
     np.random.seed(j)
-    grf = np.random.normal(0, 1, (N, N))
+    grf = 1/np.sqrt(2)*(np.random.normal(0, 1, size = (patch_size, patch_size)) + 1j * np.random.normal(0, 1, size = (patch_size, patch_size)))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c), 2 * math.pi * np.fft.fftfreq(N, c))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
     for i in range(0, N):
@@ -58,8 +57,8 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     for i in range(0, N):
         kx[i][0] = 0.001
     ft_sig = signal_ft(kx, ky)
-    ft_signal = (ft_sig + np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5 )
-    ft = (np.fft.fft2(grf) * power_spectrum(mag_k, 2, 1) ** .5)
+    ft_signal = (ft_sig + grf * power_spectrum(mag_k, 2, 1) ** .5)
+    ft = (grf * power_spectrum(mag_k, 2, 1) ** .5)
     ft_ordered = sort_ft(ft)
     ft_ordered_signal = sort_ft(ft_signal)
     threepoint = 0
@@ -78,13 +77,13 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
 def combine_complex(a, b):
     dummy = []#np.array(np.zeros(len(a)), dtype=complex)
     for i in range(0, len(a)):
-        if np.abs(a[i]+1j*b[i])<30000:
+        if np.abs(a[i]+1j*b[i])<50000:
             dummy.append(a[i]+1j*b[i])
     return dummy
 
 
-n = 500000
-parts = 5000
+n = 1
+parts = 1
 bins = 300
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
@@ -110,20 +109,23 @@ threepoint_average_signal = np.array(combine_complex(np.array(threepoint_average
 
 print(np.abs(np.mean(threepoint_average)))
 print(np.abs(np.mean(threepoint_average_signal)))
-plt.hist(np.array(threepoint_average).real, range=(-15000, 15000), bins=100)
+plt.hist(np.array(threepoint_average).real, range=(-20000, 20000), bins=100)
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
-plt.hist(np.array(threepoint_average_signal).real,range = (-15000, 15000), bins=100)
+plt.hist(np.array(threepoint_average_signal).real,range = (-20000, 20000), bins=100)
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 
 
 
-#plt.xlabel('degree')
-#plt.ylabel('degree')
-#my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
-#plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
-#plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
-#plt.imshow(np.fft.ifft2(ft).real, interpolation='none')
-#plt.show()
-#plt.savefig('test_GRF_power.png', dpi=400)
+
+
+#Plots
+'''plt.xlabel('degree')
+plt.ylabel('degree')
+my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
+plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.imshow(np.fft.ifft2(ft).real, interpolation='none')
+plt.show()
+plt.savefig('test_GRF_power.png', dpi=400)'''

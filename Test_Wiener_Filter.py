@@ -11,7 +11,7 @@ patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 wake_size = [1.,1.]
-c =  angle_per_pixel
+c = angle_per_pixel
 N = 512
 
 
@@ -22,25 +22,20 @@ def power_spectrum(k, alpha=2., sigma=1.):
 
 
 bins = 300
-grf = np.random.normal(0, 1, (N, N))
-kx, ky = np.meshgrid(2 * math.pi *np.fft.fftfreq(N, c), 2 * math.pi *np.fft.fftfreq(N, c))
+grf = np.random.normal(0, 1, size = (patch_size, patch_size)) + 1j * np.random.normal(0, 1, size = (patch_size, patch_size))
+kx, ky = np.meshgrid(np.fft.fftfreq(N, c), np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx**2 + ky**2)
 signal = np.zeros((N, N))
 for i in range(306, 407):
     for j in range(306, 407):
         signal[i][j] = 0.2
-kx[0][0]=0.001
-for i in range(0,N):
-    ky[0][i]=0.001
-for i in range(0,N):
-    kx[i][0]=0.001
-ft_signal_square = 0.2 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx *wake_size[0]) *
-                    np.sin(math.pi * ky *wake_size[1]))
-'''
+kx[0][0] = 0.001
 for i in range(0, N):
-    ft_signal_square[0][i]=0.2 * 1. * 1/(math.pi * kx) *  np.sin(math.pi * ky *1.)
-for j in range(0,N):
-    ft_signal_square[0][i] = 0.2 * 1. * 1 / (math.pi * kx) * np.sin(math.pi * ky * 1.)'''
+    ky[0][i] = 0.001
+for i in range(0, N):
+    kx[i][0] = 0.001
+ft_signal_square = 0.2 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx * wake_size[0]) * np.sin(math.pi * ky * wake_size[1]))
+ft_signal_square[0][0]=0.01
 print(kx)
 plt.imshow(np.abs(ft_signal_square))
 plt.colorbar()
@@ -48,15 +43,12 @@ plt.show()
 plt.imshow(np.abs(np.fft.fft2(signal)))
 plt.colorbar()
 plt.show()
-grf_w_power_spec_noise = np.fft.ifft2(np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal))
-ft_all = (np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + np.fft.fft2(signal))
+grf_w_power_spec_noise = np.fft.ifft2(np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + ft_signal_square)
+ft_all = (np.fft.fft2(grf) * power_spectrum(mag_k)**.5 + ft_signal_square)
 pspec = np.abs(ft_all)**2/N**2
 k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
 k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
 digi = np.digitize(mag_k, k_bins) - 1
-plt.imshow(digi)
-plt.colorbar()
-plt.show()
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = [-2.5, -1.5, -0.5, 0, 0.5, 1.5, 2.5]
@@ -68,7 +60,7 @@ plt.show()
 #plt.savefig('test_GRF_power.png', dpi=400)
 
 #Wiener-filter: (n times)
-pspec_signal = np.abs(np.fft.fft2(signal))**2/N**2
+pspec_signal = np.abs(ft_signal_square)**2/N**2
 pspec_noise = power_spectrum(mag_k)#/(2 * math.pi)**2
 wien_fn = pspec_signal/(pspec_noise + pspec_signal)
 wien_fn2 = pspec_signal/pspec_noise
