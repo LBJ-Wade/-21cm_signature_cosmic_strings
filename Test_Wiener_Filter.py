@@ -29,15 +29,13 @@ signal = np.zeros((N, N))
 for i in range(306, 407):
     for j in range(306, 407):
         signal[i][j] = 0.2
-kx[0][0] = 0.001
 for i in range(0, N):
     ky[0][i] = 0.001
 for i in range(0, N):
     kx[i][0] = 0.001
-ft_signal_square = 0.2 * (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx * wake_size[0]) * np.sin(math.pi * ky * wake_size[1]))
-ft_signal_square[0][0]=0.01
-print(kx)
-plt.imshow(np.abs(ft_signal_square))
+ft_signal_square = 2000* (1/(math.pi * kx) * 1/(math.pi * ky) * np.sin(math.pi * kx * 1) * np.sin(math.pi * ky * 1))
+print(mag_k.max()*180/math.pi)
+plt.imshow(np.fft.ifft2(ft_signal_square).real)
 plt.colorbar()
 plt.show()
 plt.imshow(np.abs(np.fft.fft2(signal)))

@@ -63,8 +63,8 @@ def deexitation_crosssection(t_k):
 z = 30
 #redshift string formation
 z_i = 1000
-#frequency bin: 40kHz = 0.04 MHz
-delta_f = 0.04
+#frequency bin: 15kHz = 0.015 MHz
+delta_f = 0.015
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)     #(1420/(z+1.)+delta_f)*(z+1)
 print('Frequency interval: f in ['+ str(1420/(1.+z))+', '+str(1420/(1.+z)+delta_f) +'] MHz.')
@@ -106,16 +106,16 @@ power_law = -2.0
 
 
 #wake properties
-theta1 = math.pi*0.32 #angle 1 in z-space
+theta1 = 0#math.pi*0.32 #angle 1 in z-space
 theta2 = 0 #angle 2 in z-space
 #wake brightness temperature [K]
-T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)*(2*np.sin(theta1)**2)**-1
-wake_brightness = T_b* 1e3 #in mK
-wake_size_angle = [1.,1.] #in degree
+T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)#*(2*np.sin(theta1)**2)**-1
+wake_brightness = T_b#in mK
+wake_size_angle = [1., 1.] #in degree
 shift_wake_angle = [0, 0]
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 
-wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
+wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *1/np.cos(theta1)#2.*np.sin(theta1)**2
 print('The string wake brightness temperature at '+str(z)+' is '+str(T_b)+' mK.')
 #wakes extend in frequency space is [v_0 + wakethickness/2, v_0 - wakethickness/2]
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
@@ -577,6 +577,7 @@ for l in range(0, N):
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 0))
     chi_list2.append(chi_square(out_2[0], out_2[1], out_2[2], power_law, foreground, 1))
     chi_filtered.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 1))
+print('Foreground noise check for foreground contaminant: '+str(foreground))
 print('For without signal: ' + str(np.mean(chi_list)))
 print('For with signal: ' + str(np.mean(chi_list_signal)))
 print('For without signal and filtered: ' + str(np.mean(chi_list2)))
