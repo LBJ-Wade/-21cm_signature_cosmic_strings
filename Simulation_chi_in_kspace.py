@@ -172,21 +172,37 @@ def angular_ps(l_max):
 
 
 def def_ang_ps(k, init_angular):
-    ps_CDM = np.zeros((len(k[1]), len(k[1])))
-    for i in range(0, len(k[1])):
-        for j in range(0, len(k[1])):
+    if k[1].ndim == 0:
+        ps_CDM = np.zeros(len(k))
+        for i in range(0, len(k)):
             l = 360 * k[i][j] / (2 * math.pi)
             l_bottom = math.floor(l)
             l_top = l_bottom + 1
             delta_l = l - l_bottom
             if l_bottom == 0:
                 if l < 0.01:
-                    ps_CDM[i][j] = init_angular[0]
+                    ps_CDM[i] = init_angular[0]
                 else:
-                    ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+                    ps_CDM[i] = init_angular[l_bottom] + delta_l * (init_angular[l_top] - init_angular[l_bottom])
             else:
-                ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
-    return ps_CDM
+                ps_CDM[i] = init_angular[l_bottom] + delta_l * (init_angular[l_top] - init_angular[l_bottom])
+        return ps_CDM
+    else:
+        ps_CDM = np.zeros((len(k[1]), len(k[1])))
+        for i in range(0, len(k[1])):
+            for j in range(0, len(k[1])):
+                l = 360 * k[i][j] / (2 * math.pi)
+                l_bottom = math.floor(l)
+                l_top = l_bottom + 1
+                delta_l = l - l_bottom
+                if l_bottom == 0:
+                   if l < 0.01:
+                        ps_CDM[i][j] = init_angular[0]
+                   else:
+                       ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+                else:
+                     ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+        return ps_CDM
 
 '''######################'''
 
@@ -215,11 +231,11 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             delta_l = -l + l_top
             if l_bottom == 0:
                 if l < 0.01:
-                    ps[i] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                    ps[i] = 1/delta_z**2*A * (lref / 1) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
                 else:
-                    ps[i] = A * (lref / l) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
+                    ps[i] = 1/delta_z**2*A * (lref / 1) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
             else:
-                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
+                ps[i] = 1/delta_z**2*A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
                             lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
                 #ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
                 #                    A * (lref / l_bottom) ** beta * (vref ** 2 / 1420 ** 2) ** a - A * (
@@ -236,11 +252,11 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 delta_l = l - l_bottom
                 if l_bottom == 0:
                     if l < 0.01:
-                        ps[i][j] = A * (lref / 0.01) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
+                        ps[i][j] = 1/delta_z**2*A * (lref / 1) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
                     else:
-                        ps[i][j] = A * (lref/l)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
+                        ps[i][j] = 1/delta_z**2*A * (lref/1)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
                 else:
-                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    ps[i][j] = 1/delta_z**2*A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
                     #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
                     #                       A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
                     #                           lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
@@ -299,7 +315,7 @@ def gaussian_random_field(size = 100, sigma = 1., mean = 0, alpha = -1.0):
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = wake_thickness * T_b * (
+    ft_signal = -1/delta_z*wake_thickness * T_b * (
                 1 / (math.pi * kx * 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     ft_signal = ft_signal+T_back
@@ -317,7 +333,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = wake_thickness* T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
+    ft_signal = -1/delta_z*wake_thickness* T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                                np.sin(math.pi * ky * wake_size_angle[1]))
     ft_signal = ft_signal + T_back
 
@@ -341,7 +357,7 @@ def grf_foreground(type, size, sigma):
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = wake_thickness * T_b * (
+    ft_signal = -1/delta_z*wake_thickness * T_b * (
                 1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     ft_signal = ft_signal + T_back
@@ -379,7 +395,7 @@ def grf_foreground_signal(type, size, sigma):
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = wake_thickness * T_b * (
+    ft_signal = -1/delta_z*wake_thickness * T_b * (
                 1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                 np.sin(math.pi * ky * wake_size_angle[1]))
     ft_signal = ft_signal + T_back
@@ -513,6 +529,7 @@ def matched_filter(foreground_comp, k, fft_s):
 
 
 #calculate chi^2 for LCDM-noise
+'''
 kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel),
                          2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
@@ -551,7 +568,7 @@ print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
 print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
 print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
 print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
-
+'''
 
 
 

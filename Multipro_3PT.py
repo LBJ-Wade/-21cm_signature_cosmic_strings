@@ -161,13 +161,13 @@ def power_spectrum(k, alpha=2, sigma=1.):
     return out
 
 
-def signal_ft(k1, k2):
+def signal_ft(k1, k2): #TODO: do it right
     return  -1/delta_z*wake_thickness*T_b*(
             1 / (math.pi * (k1+0.001)) * 1 / (math.pi * (k2+0.001)) * np.sin(math.pi * (k1+0.001) * 1.) *
             np.sin(math.pi * (k2+0.001) * 1.))
 
 
-def sort_ft(field):
+'''def sort_ft(field):
     dummy = np.array(np.zeros((len(field), len(field[0]))), dtype=complex)
     N = len(field)
     for k in range(0, int(N/2)):
@@ -182,7 +182,7 @@ def sort_ft(field):
     for k in range(int(N/2), N):
         for l in range(int(N/2), N):
             dummy[N-(k-int(N/2))-1][l-int(N/2)] = field[k][l]
-    return dummy
+    return dummy'''
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
@@ -204,7 +204,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     ft_signal = (ft_sig + grf * pspectrum ** .5)
     ft = (grf * pspectrum ** .5)
     ft_ordered = ft
-    ft_ordered_signal = ft_signal
+    ft_ordered_signal = ft_sig
     threepoint = 0
     threepoint_signal = 0
     for k in range(1, N):
@@ -225,8 +225,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 10000
-parts = 100
+n = 1
+parts = 1
 bins = 300
 foreg_type = 2
 
