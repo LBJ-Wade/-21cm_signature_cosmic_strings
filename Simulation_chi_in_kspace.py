@@ -264,7 +264,8 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
         return ps/sigma**2
 
 
-#define our signal in a real space patch with matched dimensions .... Not in use when considereing k in [1/degree]
+#define our signal in a real space patch w
+# ith matched dimensions .... Not in use when considereing k in [1/degree]
 def stringwake_ps(size, anglewake, angleperpixel, shift, background_on):
     #coordinate the dimensions of wake and shift
     patch = np.zeros((size, size))

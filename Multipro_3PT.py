@@ -59,7 +59,7 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 20. #in degree
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = 512
@@ -68,7 +68,7 @@ z = 30
 #redshift string formation
 z_i = 1000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.01
+delta_f = 0.04
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
 #redshift of center of wake
@@ -92,11 +92,14 @@ xHI = 0.75
 T_back = (0.19055) * (0.049*0.67*(1.+z_wake)**2 * xHI)/np.sqrt(0.267*(1.+z_wake)**3 + 0.684)
 #another option is to follow arXiv:1401.2095 (OmegaHI = 0.62*1e-3, rest from Roberts paper arXiv:1006.2514)   in mK !!!!
 T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z_wake)**0.5/2.5**0.5
-theta1 = 0# math.pi*0.4 #angle 1 in z-space
+theta1 =  math.pi*0.32 #angle 1 in z-space
 theta2 = 0 #angle 2 in z-space
-T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)#*(2*np.sin(theta1)**2)**-1, theta1=0
+T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)*(2*np.sin(theta1)**2)**-1
 wake_brightness = T_b* 1e3 #in mK
-wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *1/np.cos(theta1) #2.*np.sin(theta1)**21/np.cos(theta1), theta1=0
+wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2*1/np.cos(theta1)
+rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
+wake_size_angle = [1., 1.] #in degree
+shift_wake_angle = [0, 0]
 print('3PF evaluation!')
 print('Frequency interval: f in ['+ str(1420/(1.+z))+', '+str(1420/(1.+z)+delta_f) +'] MHz.')
 print('Therefore, dz = '+ str(delta_z)+' and we cover ['+ str(z)+', '+ str(z+delta_z)+ '].')
@@ -108,7 +111,7 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     lref = 1100.
-    A = A_pure #*1e-6
+    A = A_pure *1e-5
     vref = 130.  # MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -119,11 +122,11 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             delta_l = -l + l_top
             if l_bottom == 0:
                 if l < 0.01:
-                    ps[i] = 1/delta_z**2 *A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                    ps[i] = A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
                 else:
-                    ps[i] = 1/delta_z**2*A * (lref / 1.) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
+                    ps[i] = A * (lref / 1.) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
             else:
-                ps[i] = 1/delta_z**2*A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
+                ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
                             lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
                 #ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
                 #                    A * (lref / l_bottom) ** beta * (vref ** 2 / 1420 ** 2) ** a - A * (
@@ -140,11 +143,11 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 delta_l = l - l_bottom
                 if l_bottom == 0:
                     if l < 0.01:
-                        ps[i][j] = 1/delta_z**2*A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
+                        ps[i][j] = A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
                     else:
-                        ps[i][j] = 1/delta_z**2*A * (lref/1.)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
+                        ps[i][j] = A * (lref/1.)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
                 else:
-                    ps[i][j] = 1/delta_z**2*A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
+                    ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
                     #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
                     #                       A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
                     #                           lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
@@ -161,13 +164,45 @@ def power_spectrum(k, alpha=2, sigma=1.):
     return out
 
 
-def signal_ft(k1, k2): #TODO: do it right
-    return  -1/delta_z*wake_thickness*T_b*(
-            1 / (math.pi * (k1+0.001)) * 1 / (math.pi * (k2+0.001)) * np.sin(math.pi * (k1+0.001) * 1.) *
-            np.sin(math.pi * (k2+0.001) * 1.))
+def signal_ft(size, anglewake, angleperpixel, shift, background_on):
+    #coordinate the dimensions of wake and shift
+    patch = np.zeros((size, size))
+    if background_on == True:
+        patch = np.ones((size, size)) * T_back * -delta_z
+    patch_rotated = np.zeros((size, size))
+    dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
+    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * 1/(z_wake + 1.)**0.5 * 1420.*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
+    #print(-dz_wake/delta_z)
+    #print(df_wake/delta_f)
+    shift_pixel = np.zeros(2)
+    shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
+    shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
+    wakesize_pixel = [int(np.round(np.cos(theta1)*anglewake[0]/angleperpixel)), int(np.round(anglewake[1]/angleperpixel))] #theta1 term added depending on the direction of rot
+    i_x = int(size/2.+shift_pixel[0]-wakesize_pixel[0]/2.)
+    f_x = int(size/2.+shift_pixel[0]+wakesize_pixel[0]/2.+1)
+    i_y = int(size/2.+shift_pixel[1]-wakesize_pixel[1]/2.)
+    f_y = int(size/2.+shift_pixel[1]+wakesize_pixel[1]/2.+1)
+    #print(df_wake/delta_f)
+    for i in range(i_x, f_x):
+        for j in range(i_y, f_y):
+            #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
+            patch[i, j] += wake_thickness*T_b#(1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
+    #print(str(patch[f_x-1,f_y-1])+ ' signal ')
+    if rot_angle_uv!=0:
+        for k in range(i_x, f_x):
+            for l in range(i_y, f_y):
+                patch_rotated[int(np.floor(math.cos(rot_angle_uv) * (k - size/2) - math.sin(rot_angle_uv) * (l - size/2))) + size/2][
+                    int(np.floor(math.sin(rot_angle_uv) * (k - size/2) + math.cos(rot_angle_uv) * (l - size/2))) + size/2] = patch[k][l]
+        for p in range(1, size-1):
+            for q in range(1, size-1):
+                if np.abs(patch_rotated[p][q - 1] + patch_rotated[p - 1][q] + patch_rotated[p + 1][q] + patch_rotated[p][q + 1]) > 2 * max(np.abs(
+                       [patch_rotated[p][q - 1], patch_rotated[p - 1][q], patch_rotated[p + 1][q], patch_rotated[p][q + 1]])):
+                    a = np.array([patch_rotated[p][q - 1], patch_rotated[p - 1][q], patch_rotated[p + 1][q], patch_rotated[p][q + 1]])
+                    patch_rotated[p][q] = np.mean(a[np.nonzero(a)])
+        return np.fft.fft2(patch_rotated)
+    return np.fft.fft2(patch)
 
-
-'''def sort_ft(field):
+def sort_ft(field):
     dummy = np.array(np.zeros((len(field), len(field[0]))), dtype=complex)
     N = len(field)
     for k in range(0, int(N/2)):
@@ -182,17 +217,16 @@ def signal_ft(k1, k2): #TODO: do it right
     for k in range(int(N/2), N):
         for l in range(int(N/2), N):
             dummy[N-(k-int(N/2))-1][l-int(N/2)] = field[k][l]
-    return dummy'''
+    return dummy
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
     np.random.seed(j)
-    grf = 1/np.sqrt(2)*(np.random.normal(0, 1, size = (patch_size, patch_size)) + 1j * np.random.normal(0, 1, size = (patch_size, patch_size)))
+    grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
     #print(kx[0])
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    mag_k[256][256] = 0.1
-    ft_sig = signal_ft(kx, ky)
+    ft_sig = signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, True)
     if fg_type == 1:
         pspectrum = foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, 1)
     if fg_type == 2:
@@ -201,10 +235,10 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         pspectrum = foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., 1)
     if fg_type == 4:
         pspectrum = foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., 1)
-    ft_signal = (ft_sig + grf * pspectrum ** .5)
+    ft_signal = (sort_ft(ft_sig) + grf * pspectrum ** .5)
     ft = (grf * pspectrum ** .5)
     ft_ordered = ft
-    ft_ordered_signal = ft_sig
+    ft_ordered_signal = sort_ft(ft_sig)
     threepoint = 0
     threepoint_signal = 0
     for k in range(1, N):
@@ -228,7 +262,7 @@ def combine_complex(a, b):
 n = 1
 parts = 1
 bins = 300
-foreg_type = 2
+foreg_type = 1
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
