@@ -334,7 +334,7 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
         ky[0][i] = 0.001
     for i in range(0, size):
         kx[i][0] = 0.001
-    ft_signal = -1/delta_z*wake_thickness* T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
+    ft_signal = -1/delta_z*wake_thickness * T_b * (1 / (math.pi * kx* 180./math.pi) * 1 / (math.pi * ky* 180./math.pi) * np.sin(math.pi * kx * wake_size_angle[0]) *
                                np.sin(math.pi * ky * wake_size_angle[1]))
     ft_signal = ft_signal + T_back
 

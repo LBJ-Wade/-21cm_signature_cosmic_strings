@@ -68,7 +68,7 @@ z = 30
 #redshift string formation
 z_i = 1000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.04
+delta_f = 0.02
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
 #redshift of center of wake
@@ -108,10 +108,13 @@ print('The string wake brightness temperature at '+str(z)+' is '+str(T_b)+' mK.'
 print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_thickness))
 
 
+#https://arxiv.org/pdf/0804.1130.pdf
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
+    sec_small = sorted(k[int(patch_size/2)])[1]
+    k[int(patch_size/2)][int(patch_size/2)] = sec_small
     lref = 1100.
-    A = A_pure *1e-5
+    A = A_pure #*1e-3
     vref = 130.  # MHz
     if k[1].ndim == 0:
         ps = np.zeros(len(k))
@@ -122,9 +125,9 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
             delta_l = -l + l_top
             if l_bottom == 0:
                 if l < 0.01:
-                    ps[i] = A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
+                    ps[i] = A * (lref / 1) ** beta * (vref ** 2 / 1420 ** 2) ** a * (1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2
                 else:
-                    ps[i] = A * (lref / 1.) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
+                    ps[i] = A * (lref / 1) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a + 1.) * ((1. + z)**(a + 1.) - (1. + z + delta_z)**(a+1.))) ** 2
             else:
                 ps[i] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref / l_bottom) ** beta * (vref ** 2 / 1420**2) ** a - A * (
                             lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2  # exp()
@@ -143,9 +146,9 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                 delta_l = l - l_bottom
                 if l_bottom == 0:
                     if l < 0.01:
-                        ps[i][j] = A * (lref / 1.) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
+                        ps[i][j] = A * (lref / 1) ** beta * (vref ** 2 / 1420 ** 2) ** a *(1. / (a + 1.) * ((1. + z) ** (a + 1.) - (1. + z + delta_z) ** (a + 1.))) ** 2 #((1+z_wake)**2)**a
                     else:
-                        ps[i][j] = A * (lref/1.)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
+                        ps[i][j] = A * (lref/ 1)**beta * (vref**2/1420**2)**a * (1./(a+1.) * ((1.+z)**(a+1.) - (1. + z + delta_z)**(a+1.)))**2 #((1+z_wake)**2)**a
                 else:
                     ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420**2) ** a * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+ z + delta_z)**(a+1.)))**2 + delta_l * (A * (lref/l_bottom)**beta * (vref**2/(1420**2))**a - A * (lref/l_top)**beta * (vref**2/(1420**2))**a) * (1./(a+1.) * ((1.+z)**(a+1.) - (1.+z+delta_z)**(a+1.)))**2  #exp()
                     #ps[i][j] = A * (lref / l_top) ** beta * (vref ** 2 / 1420 ** 2) ** a *((1+z_wake)**2)**a + delta_l * (
@@ -177,7 +180,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
-    wakesize_pixel = [int(np.round(np.cos(theta1)*anglewake[0]/angleperpixel)), int(np.round(anglewake[1]/angleperpixel))] #theta1 term added depending on the direction of rot
+    wakesize_pixel = [int(np.round(np.cos(0)*anglewake[0]/angleperpixel)), int(np.round(anglewake[1]/angleperpixel))] #theta1 term added depending on the direction of rot
     i_x = int(size/2.+shift_pixel[0]-wakesize_pixel[0]/2.)
     f_x = int(size/2.+shift_pixel[0]+wakesize_pixel[0]/2.+1)
     i_y = int(size/2.+shift_pixel[1]-wakesize_pixel[1]/2.)
@@ -221,9 +224,14 @@ def sort_ft(field):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j)
+    #np.random.seed(j)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
-    kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
+    #np.random.seed(j)
+    #grf = 1 / np.sqrt(2) * (np.random.normal(0, 1, size=(patch_size, patch_size)) + 1.0j * np.random.normal(0, 1, size=(
+    #patch_size, patch_size)))
+    #kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
+    kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
+                         2 * math.pi * np.fft.fftfreq(N, c))
     #print(kx[0])
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
     ft_sig = signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, True)
@@ -235,10 +243,21 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         pspectrum = foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., 1)
     if fg_type == 4:
         pspectrum = foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., 1)
-    ft_signal = (sort_ft(ft_sig) + grf * pspectrum ** .5)
+    ft_sig_sort = sort_ft(ft_sig)
+    ft_signal = (ft_sig_sort + grf *patch_size**2 * pspectrum ** .5)
+    ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
+    #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
     ft = (grf * pspectrum ** .5)
+    plt.imshow(np.fft.ifft2(ft_sig).real)
+    plt.colorbar()
+    plt.show()
+    ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
+    # ft_filtered = ft * ft_sig_sort /pspectrum  #Matched filter
+    plt.imshow(np.fft.ifft2(ft).real)
+    plt.colorbar()
+    plt.show()
     ft_ordered = ft
-    ft_ordered_signal = sort_ft(ft_sig)
+    ft_ordered_signal = ft_sig_sort
     threepoint = 0
     threepoint_signal = 0
     for k in range(1, N):
