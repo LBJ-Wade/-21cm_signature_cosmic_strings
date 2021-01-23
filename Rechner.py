@@ -37,7 +37,7 @@ plt.show()
 
 
 
-z = 30
+'''z = 30
 z_wake=z
 #redshift string formation
 z_i = 1000
@@ -112,7 +112,7 @@ ps_LCDM = def_ang_ps(mag_k, init_angular)
 noise_real = np.random.normal(0, 1, size = (patch_size, patch_size))
 noise = np.fft.fft2(noise_real)
 grf = np.fft.ifft2(noise * ps_LCDM**0.5).real
-np.save('grf_LCDAM', grf)
+np.save('grf_LCDAM', grf)'''
 
 
 
@@ -122,7 +122,7 @@ np.save('grf_LCDAM', grf)
 
 
 
-'''
+
 z = 30 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
 T_inst = 0#T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
@@ -164,6 +164,10 @@ def foregroung(l):
                 dummy[i][j] = 1100 * (1100. / (l[i][j]+1)) ** 3.3 * (130. ** 2 / 1420. ** 2) ** 2.8 * (1+30)**(2*2.8)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
     return dummy
 
+def LCDM(l):
+
+    return
+
 
 def GRF_generator(ang, shape, seed=None):
     """
@@ -184,7 +188,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = foregroung(l )#grf2, grf1, grf3)
+    Pl = LCDM(l)#grf2, grf1, grf3)
 
     real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=10., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=10., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -234,7 +238,4 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
-a = (300*1e-6)*1/0.75 * (1.2*150*1e-3/115)**-2* ((25)**2/100)**-1 *(1420/(1+z)/120)**-2.07
-print(a)
-print(57 * (1100. / (30)) ** 1.1 * (130. ** 2 / 1420. ** 2) ** 2.07 * (
-                            1 + z) ** (2 *2.07))'''
+LCDM_ps = np.load('angular_ps_30.npy')

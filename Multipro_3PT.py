@@ -293,25 +293,24 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     ft_signal = (ft_sig + grf_norm_fg)
     ft = grf_norm_fg
+    ft[256,256] = 0
+    ft_signal[256,256] = 0
     #ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
     #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
     #ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
     # ft_filtered = ft * ft_sig_sort /pspectrum  #Matched filter
-    reduc = 1e-6
+    reduc = 1e-3
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
-    '''plt.imshow(np.abs(ft_signal))
-    plt.colorbar()
-    plt.show()
-    plt.imshow(np.abs(ft_ordered))
+    '''plt.imshow(np.abs(ft_ordered_signal))
     plt.colorbar()
     plt.show()'''
     threepoint = 0
     threepoint_signal = 0
     for k in range(1, N):
         for l in range(1, N):
-            threepoint += ft_ordered[k][l] * ft_ordered[N - k ][N - l ] * ft_ordered[N - l ][k]
-            threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k ][N - l ] * ft_ordered_signal[N - l ][k]
+            threepoint += ft_ordered[k][l] * ft_ordered[N - k][N - l] * ft_ordered[N - l][k]
+            threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k][N - l] * ft_ordered_signal[N - l][k]
     threepoint_average_r[j] = (threepoint / (N-1) ** 2).real
     threepoint_average_i[j] = (threepoint / (N-1) ** 2).imag
     threepoint_average_signal_r[j] = (threepoint_signal / (N-1) ** 2).real
@@ -326,8 +325,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 10
-parts = 1
+n = 100000
+parts = 1000
 bins = 300
 foreg_type = 1
 

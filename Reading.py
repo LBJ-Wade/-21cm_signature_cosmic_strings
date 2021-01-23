@@ -11,7 +11,7 @@ patch_size = N
 c = 5./512
 z = 30
 foreground_type = 3
-T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
+T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 grf = np.load('grf_LCDAM.npy')
 plt.imshow(grf)
 #plt.imshow((grf+T_back2-(1+z)*2.725)/(1+z))
@@ -87,7 +87,7 @@ plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.imshow(np.fft.ifft2(    grf_norm_fg   ).real)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'K'+'$]$', rotation=270, labelpad=20, size=11 )
-plt.show()
+#plt.show()
 
 
 '''x= np.linspace(0,1,1000)
