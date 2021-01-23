@@ -36,25 +36,27 @@ plt.show()
 ######################
 
 
-'''
+
 z = 30
+z_wake=z
 #redshift string formation
 z_i = 1000
 #frequency bin: 40kHz = 0.04 MHz
 delta_f = 0.04
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
-patch_size =512
-patch_angle =5.
+patch_size = 512
+patch_angle = 5.
 angle_per_pixel = patch_angle/patch_size
+T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) * np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z_wake)**0.5/2.5**0.5
 
 
 def ps(k, l): #TODO: substitute 10 with the brightness temperature
-    return 10 * cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
+    return T_back2**2 * (1 + (0.7*(1+z)**3*(cosmo.background.H_a(a=1.)**2/cosmo.background.H_a(a=1./(1+z))**2))**0.55*(k/np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))**2)**2  * cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
 
 
 def multi_fn(j, dummy):
-    dummy[j] = 1/(math.pi * cosmo.background.dist_rad_a(1/(1+z)) * cosmo.background.dist_rad_a(1/(1+z+delta_z)) ) * integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1/(1+z)) - cosmo.background.dist_rad_a(1/(1+z+delta_z)))*k) * ps(k, j), 0, 20)[0]
+    dummy[j] = 1/(math.pi * cosmo.background.dist_rad_a(1/(1+z)) * cosmo.background.dist_rad_a(1/(1+z+delta_z)) ) * integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1/(1+z)) - cosmo.background.dist_rad_a(1/(1+z+delta_z)))*k) * ps(k, j), 0, 40)[0]
 
 
 def angular_ps(l_max):
@@ -93,12 +95,12 @@ def def_ang_ps(k, init_angular):
             l_top = l_bottom + 1
             delta_l = l - l_bottom
             if l_bottom == 0:
-                if l < 0.01:
+                if l < 0.1:
                     ps_CDM[i][j] = init_angular[0]
                 else:
-                    ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+                    ps_CDM[i][j] = init_angular[l_bottom] + delta_l*(init_angular[l_top]-init_angular[l_bottom])
             else:
-                ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
+                ps_CDM[i][j] = init_angular[l_bottom] + delta_l*(init_angular[l_top]-init_angular[l_bottom])
     return ps_CDM
 
 kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel),
@@ -110,10 +112,17 @@ ps_LCDM = def_ang_ps(mag_k, init_angular)
 noise_real = np.random.normal(0, 1, size = (patch_size, patch_size))
 noise = np.fft.fft2(noise_real)
 grf = np.fft.ifft2(noise * ps_LCDM**0.5).real
-np.save('grf_LCDAM', grf)'''
+np.save('grf_LCDAM', grf)
+
+
+
 
 ##################
 
+
+
+
+'''
 z = 30 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
 T_inst = 0#T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
@@ -225,5 +234,7 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
-a = (100*1e-6)*1/0.75 * (1.2*150*1e-3/115)**-2* ((1)**2/100)**-1 *(45/120)**-2.07
+a = (300*1e-6)*1/0.75 * (1.2*150*1e-3/115)**-2* ((25)**2/100)**-1 *(1420/(1+z)/120)**-2.07
 print(a)
+print(57 * (1100. / (30)) ** 1.1 * (130. ** 2 / 1420. ** 2) ** 2.07 * (
+                            1 + z) ** (2 *2.07))'''

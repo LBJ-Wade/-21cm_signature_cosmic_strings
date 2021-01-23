@@ -1,25 +1,33 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-'''grf= np.load('grf_LCDAM.npy')
-plt.imshow(grf)
-plt.colorbar()
-plt.show()'''
+
+'''import PyCosmo as pyco
+cosmo = pyco.Cosmo()
+cosmo.set(pk_type = 'BBKS')'''
+
 N = 512
 patch_size = N
 c = 5./512
 z = 30
-foregroung_type = 1
+foreground_type = 3
+T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
+grf = np.load('grf_LCDAM.npy')
+plt.imshow(grf)
+#plt.imshow((grf+T_back2-(1+z)*2.725)/(1+z))
+plt.colorbar()
+plt.show()
 
-def fg_normalize(grf_fg, fg_type):
+
+def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
         mean, std = 253*(1420/(1+z)*1/120)**-2.8, 1.3*(1420/(1+z)*1/120)**-2.8
     if fg_type == 2:
-        mean, std = 1,1
+        mean, std = 38.6*(1420/(1+z)*1/151)**-2.07, 2.3*(1420/(1+z)*1/151)**-2.07
     if fg_type == 3:
         mean, std = 2.2*(1420/(1+z)*1/120)**-2.15, 0.05*(1420/(1+z)*1/120)**-2.15
     if fg_type == 4:
-        mean, std = 1,1
+        mean, std = 1e-4*(1420/(1+z)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z)*1/(2*1e3))**-2.1
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -41,14 +49,14 @@ def fg_normalize(grf_fg, fg_type):
 #Galactic free-free        0.088, 3.0, 2.15, 32.)   3
 #Extragalactic free-free   0.014, 1.0, 2.10, 35.)   4
 #https://arxiv.org/pdf/0804.1130.pdf  and   https://arxiv.org/pdf/astro-ph/0408515.pdf -->Implementation
-def foregroung(l, fg_type):
+def foreground(l, fg_type):
     if fg_type == 1:
         A, beta, alpha = 1100., 3.3, 2.80
-    if fg_type == 2:
-        A, beta, alpha = 57., 1.1, 2.07 #https://safe.nrao.edu/wiki/pub/Main/RadioTutorial/flux-to-brightness.pdf and https://arxiv.org/pdf/0804.1130.pdf extraprolated to relevant freq
+    if fg_type == 2:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/588628/pdf
+        A, beta, alpha = 57., 1.1, 2.07
     if fg_type == 3:
         A, beta, alpha = 0.088, 3.0, 2.15
-    if fg_type == 4:#https://arxiv.org/pdf/astro-ph/0408515.pdf --> uncertainty at least two orders of magnitude
+    if fg_type == 4:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/421241/pdf --> uncertainty at least two orders of magnitude
         A, beta, alpha = 0.014, 1.0, 2.10
     dummy = np.zeros((N,N))
     for i in range(0,len(l)):
@@ -67,10 +75,22 @@ mag_k = np.sqrt(kx ** 2 + ky ** 2)
 grf = np.random.normal(0., 1., size = (patch_size, patch_size))
 #grf = np.random.normal(15.64, 63, size = (patch_size, patch_size))
 l = 360 * mag_k/ (2 * math.pi)
-fg = foregroung(l, foregroung_type)
+fg = foreground(l, foreground_type)
 grf_fg = np.fft.fft2(grf)*fg**0.5*1e-3 #in Kelvin
-grf_norm_fg = fg_normalize(grf_fg, foregroung_type)
-print(np.std(np.fft.ifft2(    grf_norm_fg   ).real))
+grf_norm_fg = fg_normalize(grf_fg, foreground_type)
+
+plt.xlabel('degree')
+plt.ylabel('degree')
+my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
+plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.imshow(np.fft.ifft2(    grf_norm_fg   ).real)
-plt.colorbar()
+cbar = plt.colorbar()
+cbar.set_label('$ T_b \,\,\,[$'+'K'+'$]$', rotation=270, labelpad=20, size=11 )
 plt.show()
+
+
+'''x= np.linspace(0,1,1000)
+y= cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=x)
+plt.loglog(x,y)
+plt.show()'''

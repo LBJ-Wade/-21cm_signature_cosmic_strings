@@ -109,7 +109,7 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 
 
 #https://arxiv.org/pdf/0804.1130.pdf
-def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
+'''def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
     #an example from arXiv:2010.15843 (deep21)
     sec_small = sorted(k[int(patch_size/2)])[1]
     k[int(patch_size/2)][int(patch_size/2)] = sec_small
@@ -155,8 +155,56 @@ def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma): # Xi):
                     #                       A * (lref / l_bottom) ** beta * (vref ** 2 / (1420 ** 2)) ** a - A * (
                     #                           lref / l_top) ** beta * (vref ** 2 / (1420 ** 2)) ** a) *((1+z_wake)**2)**a
         #print(np.mean(ps)**0.5)
-        return ps/sigma**2
+        return ps/sigma**2'''
 
+def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
+    if fg_type == 1:
+        mean, std = 253*(1420/(1+z)*1/120)**-2.8, 1.3*(1420/(1+z)*1/120)**-2.8
+    if fg_type == 2:
+        mean, std = 38.6*(1420/(1+z)*1/151)**-2.07, 2.3*(1420/(1+z)*1/151)**-2.07
+    if fg_type == 3:
+        mean, std = 2.2*(1420/(1+z)*1/120)**-2.15, 0.05*(1420/(1+z)*1/120)**-2.15
+    if fg_type == 4:
+        mean, std = 1e-4*(1420/(1+z)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z)*1/(2*1e3))**-2.1
+    sum = 0
+    for i in range(0, len(grf_fg)):
+        for j in range(0, len(grf_fg)):
+            sum += np.abs(grf_fg[i, j]) ** 2
+    sum = sum - grf_fg[0, 0] ** 2
+    for i in range(0, len(grf_fg)):
+        for j in range(0, len(grf_fg)):
+            grf_fg[i, j] = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum) * grf_fg[i, j]
+    grf_fg[0][0] = mean * patch_size ** 2
+    return  grf_fg
+
+
+
+
+#deep21 arXiv:2010.15843       A  beta  alpha Xi   type
+#--------------------------------------------------------
+#Galactic Synchrotron       1100, 3.3, 2.80, 4.0)   1
+#Point Sources                57, 1.1, 2.07, 1.0)   2
+#Galactic free-free        0.088, 3.0, 2.15, 32.)   3
+#Extragalactic free-free   0.014, 1.0, 2.10, 35.)   4
+#https://arxiv.org/pdf/0804.1130.pdf  and   https://arxiv.org/pdf/astro-ph/0408515.pdf -->Implementation
+def foreground(l, fg_type):
+    if fg_type == 1:
+        A, beta, alpha = 1100., 3.3, 2.80
+    if fg_type == 2:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/588628/pdf
+        A, beta, alpha = 57., 1.1, 2.07
+    if fg_type == 3:
+        A, beta, alpha = 0.088, 3.0, 2.15
+    if fg_type == 4:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/421241/pdf --> uncertainty at least two orders of magnitude
+        A, beta, alpha = 0.014, 1.0, 2.10
+    dummy = np.zeros((N,N))
+    for i in range(0,len(l)):
+        for j in range(0,len(l)):
+            if l[i][j]<1:
+                dummy[i][j] = A * (1100. / (1)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (
+                            1 + z) ** (2 *alpha)
+            else:
+                dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+    return dummy
 
 
 
@@ -173,10 +221,8 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     if background_on == True:
         patch = np.ones((size, size)) * T_back * -delta_z
     patch_rotated = np.zeros((size, size))
-    dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
-    df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * 1/(z_wake + 1.)**0.5 * 1420.*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
-    #print(-dz_wake/delta_z)
-    #print(df_wake/delta_f)
+    #dz_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2/np.cos(theta1)
+    #df_wake = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * 1/(z_wake + 1.)**0.5 * 1420.*2.*np.sin(theta1)**2/np.cos(theta1) # MHz. THe 2sin^2 theta cancels when multiplied with T_b
     shift_pixel = np.zeros(2)
     shift_pixel[0] = int(np.round(shift[0]/angleperpixel))
     shift_pixel[1] = int(np.round(shift[1]/angleperpixel))
@@ -185,12 +231,10 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     f_x = int(size/2.+shift_pixel[0]+wakesize_pixel[0]/2.+1)
     i_y = int(size/2.+shift_pixel[1]-wakesize_pixel[1]/2.)
     f_y = int(size/2.+shift_pixel[1]+wakesize_pixel[1]/2.+1)
-    #print(df_wake/delta_f)
     for i in range(i_x, f_x):
         for j in range(i_y, f_y):
             #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            patch[i, j] += wake_thickness*T_b#(1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
-    #print(str(patch[f_x-1,f_y-1])+ ' signal ')
+            patch[i, j] += wake_thickness*T_b  #(1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
             for l in range(i_y, f_y):
@@ -205,7 +249,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
         return np.fft.fft2(patch_rotated)
     return np.fft.fft2(patch)
 
-def sort_ft(field):
+'''def sort_ft(field):
     dummy = np.array(np.zeros((len(field), len(field[0]))), dtype=complex)
     N = len(field)
     for k in range(0, int(N/2)):
@@ -220,11 +264,11 @@ def sort_ft(field):
     for k in range(int(N/2), N):
         for l in range(int(N/2), N):
             dummy[N-(k-int(N/2))-1][l-int(N/2)] = field[k][l]
-    return dummy
+    return dummy'''
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    #np.random.seed(j)
+    np.random.seed(j)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     #np.random.seed(j)
     #grf = 1 / np.sqrt(2) * (np.random.normal(0, 1, size=(patch_size, patch_size)) + 1.0j * np.random.normal(0, 1, size=(
@@ -234,40 +278,44 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
                          2 * math.pi * np.fft.fftfreq(N, c))
     #print(kx[0])
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    ft_sig = signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, True)
+    l = 360 * mag_k / (2 * math.pi)
+    ft_sig = np.fft.fftshift(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))
     if fg_type == 1:
-        pspectrum = foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, 1)
+        pspectrum = foreground(l, 1)
     if fg_type == 2:
-        pspectrum = foreground_power_spectrum(mag_k, 57, 1.1, 2.07, 1.0, 1)
+        pspectrum = foreground(l, 2)
     if fg_type == 3:
-        pspectrum = foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., 1)
+        pspectrum = foreground(l, 3)
     if fg_type == 4:
-        pspectrum = foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., 1)
-    ft_sig_sort = sort_ft(ft_sig)
-    ft_signal = (ft_sig_sort + grf *patch_size**2 * pspectrum ** .5)
-    ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
+        pspectrum = foreground(l, 4)
+    grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
+    epsilon_fgr = 1
+    grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
+    ft_signal = (ft_sig + grf_norm_fg)
+    ft = grf_norm_fg
+    #ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
     #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
-    ft = (grf * pspectrum ** .5)
-    plt.imshow(np.fft.ifft2(ft_sig).real)
-    plt.colorbar()
-    plt.show()
-    ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
+    #ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
     # ft_filtered = ft * ft_sig_sort /pspectrum  #Matched filter
-    plt.imshow(np.fft.ifft2(ft).real)
+    reduc = 1e-6
+    ft_ordered = ft*reduc
+    ft_ordered_signal = ft_signal*reduc
+    '''plt.imshow(np.abs(ft_signal))
     plt.colorbar()
     plt.show()
-    ft_ordered = ft
-    ft_ordered_signal = ft_sig_sort
+    plt.imshow(np.abs(ft_ordered))
+    plt.colorbar()
+    plt.show()'''
     threepoint = 0
     threepoint_signal = 0
     for k in range(1, N):
         for l in range(1, N):
-            threepoint += ft_ordered[k][l] * ft_ordered[N - k -1][N - l -1] * ft_ordered[N - l -1][k]
-            threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k -1][N - l -1] * ft_ordered_signal[N - l - 1][k]
-    threepoint_average_r[j] = (threepoint / N ** 2).real
-    threepoint_average_i[j] = (threepoint / N ** 2).imag
-    threepoint_average_signal_r[j] = (threepoint_signal / N ** 2).real
-    threepoint_average_signal_i[j] = (threepoint_signal / N ** 2).imag
+            threepoint += ft_ordered[k][l] * ft_ordered[N - k ][N - l ] * ft_ordered[N - l ][k]
+            threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k ][N - l ] * ft_ordered_signal[N - l ][k]
+    threepoint_average_r[j] = (threepoint / (N-1) ** 2).real
+    threepoint_average_i[j] = (threepoint / (N-1) ** 2).imag
+    threepoint_average_signal_r[j] = (threepoint_signal / (N-1) ** 2).real
+    threepoint_average_signal_i[j] = (threepoint_signal / (N-1) ** 2).imag
 
 
 def combine_complex(a, b):
@@ -278,7 +326,7 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 1
+n = 10
 parts = 1
 bins = 300
 foreg_type = 1
