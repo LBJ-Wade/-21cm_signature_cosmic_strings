@@ -136,7 +136,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 
 '''LCDM POWER SPECTRUM'''
 
-def ps(k, l):
+'''def ps(k, l):
     return cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
 
 
@@ -202,7 +202,7 @@ def def_ang_ps(k, init_angular):
                        ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
                 else:
                      ps_CDM[i][j] = init_angular[l_bottom]+ delta_l*(init_angular[l_top]-init_angular[l_bottom])
-        return ps_CDM
+        return ps_CDM'''
 
 '''######################'''
 
@@ -480,8 +480,8 @@ def chi_square(data_sample_real, magnitude_k, fft_signal, alpha, foreground_type
                                  foreground_power_spectrum(k_bin_cents, 57, 1.1, 2.07, 1.0, 1)*bins +
                                  foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15, 32., 1)*bins +
                                  foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 35., 1)*bins))
-    if foreground_type == 6:
-        return np.sum(binned_ps / (def_ang_ps(k_bin_cents, init_angular) * bins))
+    #if foreground_type == 6:
+    #    return np.sum(binned_ps / (def_ang_ps(k_bin_cents, init_angular) * bins))
 
 '''Section 3.2: define the filter funcitons'''
 
@@ -501,8 +501,8 @@ def wien_filter(foreground_comp, k, fft_s):
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
-    if foreground_comp == 6:
-        pspec_noise = ps_LCDM
+    #if foreground_comp == 6:
+    #    pspec_noise = ps_LCDM
     return pspec_noise, pspec_signal/(pspec_noise + pspec_signal)
 
 
@@ -521,8 +521,8 @@ def matched_filter(foreground_comp, k, fft_s):
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
-    if foreground_comp == 6:
-        pspec_noise = ps_LCDM
+    #if foreground_comp == 6:
+    #    pspec_noise = ps_LCDM
     return pspec_noise, pspec_signal/pspec_noise
 
 

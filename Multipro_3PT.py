@@ -289,12 +289,10 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if fg_type == 4:
         pspectrum = foreground(l, 4)
     grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
-    epsilon_fgr = 1
+    epsilon_fgr = 1e-2
     grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     ft_signal = (ft_sig + grf_norm_fg)
     ft = grf_norm_fg
-    ft[256,256] = 0
-    ft_signal[256,256] = 0
     #ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
     #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
     #ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
@@ -309,6 +307,8 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     threepoint_signal = 0
     for k in range(1, N):
         for l in range(1, N):
+            if l==256 and k==256:
+                continue
             threepoint += ft_ordered[k][l] * ft_ordered[N - k][N - l] * ft_ordered[N - l][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k][N - l] * ft_ordered_signal[N - l][k]
     threepoint_average_r[j] = (threepoint / (N-1) ** 2).real
@@ -325,8 +325,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 100000
-parts = 1000
+n = 10
+parts = 1
 bins = 300
 foreg_type = 1
 

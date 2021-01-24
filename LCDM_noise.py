@@ -37,7 +37,7 @@ plt.show()
 
 
 
-'''z = 30
+z = 30
 z_wake=z
 #redshift string formation
 z_i = 1000
@@ -50,7 +50,7 @@ patch_angle = 5.
 angle_per_pixel = patch_angle/patch_size
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) * np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z_wake)**0.5/2.5**0.5
 
-
+'''
 def ps(k, l): #TODO: substitute 10 with the brightness temperature
     return T_back2**2 * (1 + (0.7*(1+z)**3*(cosmo.background.H_a(a=1.)**2/cosmo.background.H_a(a=1./(1+z))**2))**0.55*(k/np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))**2)**2  * cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
 
@@ -165,8 +165,20 @@ def foregroung(l):
     return dummy
 
 def LCDM(l):
-
-    return
+    dummy = np.zeros((l.shape[0], l.shape[1]))
+    for i in range(0, len(dummy)):
+        for j in range(0, len(dummy[0])):
+            l_bottom = math.floor(l[i][j])
+            l_top = l_bottom + 1
+            delta_l = l[i,j] - l_bottom
+            if l_bottom == 0:
+                if l[i][j] < 0.1:
+                    dummy[i][j] = LCDM_ps[0]
+                else:
+                    dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+            else:
+                dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+    return dummy
 
 
 def GRF_generator(ang, shape, seed=None):
@@ -184,14 +196,13 @@ def GRF_generator(ang, shape, seed=None):
     # Compute the multipole moment of each FFT pixel
     l = np.sqrt(lx[np.newaxis, :] ** 2 + ly[:, np.newaxis] ** 2)
 
-
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
     Pl = LCDM(l)#grf2, grf1, grf3)
 
-    real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=10., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
-    imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=10., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
+    real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
+    imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
 
     # Get map in real space and return
     ft_map = (real_part + imaginary_part*1.0j) * l.shape[0] ** 2
@@ -239,3 +250,12 @@ def GRF_spec(kappa, l_edges, ang):
 
 
 LCDM_ps = np.load('angular_ps_30.npy')
+plt.imshow(np.fft.ifft2(np.fft.fft2(GRF_generator(5, [512,512]))).real+T_back2)
+plt.xlabel('degree')
+plt.ylabel('degree')
+my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
+plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
+cbar = plt.colorbar()
+cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
+plt.show()
