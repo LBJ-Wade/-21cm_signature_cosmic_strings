@@ -153,16 +153,33 @@ def rfftfreq(n, d=1.0):
     return results * val
 
 
-def foregroung(l):
-    dummy = np.zeros((l.shape[0], l.shape[1]))
-    for i in range(0,len(dummy)):
-        for j in range(0,len(dummy[0])):
-            if l[i][j]<30:
-                dummy[i][j] = 1100 * (1100. / (30)) ** 3.3 * (130. ** 2 / 1420. ** 2) ** 2.8 * (
-                            1 + 30) ** (2 *2.8)  # (1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
-            else:
-                dummy[i][j] = 1100 * (1100. / (l[i][j]+1)) ** 3.3 * (130. ** 2 / 1420. ** 2) ** 2.8 * (1+30)**(2*2.8)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
-    return dummy
+def foreground(l, fg_type):
+    if fg_type == 1:
+        A, beta, alpha = 1100., 3.3, 2.80
+    if fg_type == 2:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/588628/pdf
+        A, beta, alpha = 57., 1.1, 2.07
+    if fg_type == 3:
+        A, beta, alpha = 0.088, 3.0, 2.15
+    if fg_type == 4:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/421241/pdf --> uncertainty at least two orders of magnitude
+        A, beta, alpha = 0.014, 1.0, 2.10
+    if l[1].ndim == 0:
+       dummy = np.zeros(len(l))
+       for i in range(0, len(dummy)):
+           if l[i] < 1:
+               dummy[i] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
+           else:
+               dummy[i] = A * (1100. / (l[i] + 1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha * (1 + z_wake) ** (
+                           2 * alpha)  # (1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+       return dummy
+    else:
+        dummy = np.zeros((N, N))
+        for i in range(0,len(l)):
+            for j in range(0,len(l)):
+                if l[i][j]<1:
+                    dummy[i][j] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
+                else:
+                    dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z_wake)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+        return dummy
 
 def LCDM(l):
     dummy = np.zeros((l.shape[0], l.shape[1]))
@@ -260,19 +277,27 @@ cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 plt.show()'''
 
-x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110, 18.1667, 27.2505])
-y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 2.9496350e+17, 1.0787888e+18])
+x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110,14])
+y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 1.5238e+17])
 
 fig, axs = plt.subplots(2, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
-z=np.linspace(0.0001,30, 1000)
-axs[1].plot(x, y*10**-5)
-axs[1].vlines(0.216518, 2.5775220e+8, 3e13)
-axs[1].vlines(27.2505,1.0787888e+13, 3e13)
+z=np.linspace(0.0001,15, 1000)
+a=np.linspace(0.2, 15, 100)
+axs[1].plot(x, y*10**-5, label='$P_{inst}$')
+axs[1].plot(a, foreground(180*a/np.pi, 1)*1e1 , label='$P_{fg1}\cdot 10^1$')
+axs[1].plot(a, foreground(180*a/np.pi, 2)*1e7 , label='$P_{fg2}\cdot 10^7$')
+axs[1].plot(a, foreground(180*a/np.pi, 3)*0.5e6 , label='$P_{fg2}\cdot 0.5\cdot 10^6$')
+axs[1].plot(a, foreground(180*a/np.pi, 4)*1e11 , label='$P_{fg2}\cdot 10^{11}$')
+
+axs[1].vlines(0.216518, 2.5775220e+8, 1e13)
+#axs[1].vlines(27.2505,1.0787888e+13, 3e13)
 axs[1].set(ylabel= '$P(k)\,\,\,$[mK'+'$^2$]')
 axs[1].set(xlabel='k $\,\,\,$ [1/degree]')
-axs[0].plot(z, -88.5*1/(np.pi*z) *np.sin(np.pi*z))
+axs[0].plot(z, -88.5*1/(np.pi*z) *np.sin(np.pi*z), label='$\delta T_{signal}$')
 axs[0].set(ylabel= '$\delta T_b^{wake}(k)\,\,\,$[mK]')
 axs[1].axvspan( 0.216518, 12.1110, color='lightgrey')
 axs[0].axvspan( 0.216518, 12.1110, color='lightgrey')
+axs[0].legend(loc='upper right')
+axs[1].legend(loc='upper right')
 plt.show()
