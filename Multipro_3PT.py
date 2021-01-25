@@ -276,7 +276,6 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     #kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                          2 * math.pi * np.fft.fftfreq(N, c))
-    #print(kx[0])
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
     l = 360 * mag_k / (2 * math.pi)
     ft_sig = np.fft.fftshift(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))
@@ -288,11 +287,12 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         pspectrum = foreground(l, 3)
     if fg_type == 4:
         pspectrum = foreground(l, 4)
+    epsilon_fgr = 1#e-1
+    filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum))
     grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
-    epsilon_fgr = 1e-1
     grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
-    ft_signal = (ft_sig + grf_norm_fg)
-    ft = grf_norm_fg
+    ft_signal = (ft_sig + grf_norm_fg) * filter_function
+    ft = grf_norm_fg * filter_function
     #plt.imshow(np.fft.ifft2(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr).real)
     #plt.colorbar()
     #plt.show()
@@ -300,7 +300,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
     #ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
     # ft_filtered = ft * ft_sig_sort /pspectrum  #Matched filter
-    reduc = 1e-2
+    reduc = 1#e-2
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -325,8 +325,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 100000
-parts = 1000
+n = 100
+parts = 1
 foreg_type = 1
 
 threepoint_average_r = multiprocessing.Array('d', range(n))

@@ -207,22 +207,22 @@ for k in range(0, n):
     grf_fg = np.fft.fft2(grf)*fg**0.5*1e-3 #in Kelvin
     grf_norm_fg, std_fg, norm = fg_normalize(grf_fg, foreground_type)
     sig_ps = np.abs(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))**2/patch_size**2
-    filter_function = sig_ps/(fg+sig_ps)
     #plt.imshow(np.fft.ifft2(grf_norm_fg).real)
     #plt.colorbar()
     #plt.show()
 
-    grf2 = np.random.normal(16, 68, size=(patch_size, patch_size))
+    grf2 = np.random.normal(16, 69, size=(patch_size, patch_size))
     grf_fg2 = np.fft.fft2(grf2) * fg ** 0.5 * 1e-3  # in Kelvin
 
     #plt.imshow(np.fft.ifft2(grf_fg2).real)
     #plt.colorbar()
     #plt.show()
-    means+= np.mean(np.fft.ifft2(grf_fg2).real)
-    stds+=np.std(np.fft.ifft2(grf_fg2).real)
+    means += np.mean(np.fft.ifft2(grf_fg2).real)
+    stds += np.std(np.fft.ifft2(grf_fg2).real)
 
     bins = 300
     epsilon_fgr = 1e-1
+    filter_function = sig_ps / (fg + sig_ps)
     data_ft = grf_norm_fg*1e3*-delta_z*epsilon_fgr + signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False) #in mK
     data_ft_nosig = grf_norm_fg*1e3*-delta_z*epsilon_fgr
     data_ps = np.abs(filter_function * data_ft)**2/(patch_size**2)
