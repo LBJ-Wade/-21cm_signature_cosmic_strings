@@ -249,7 +249,7 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
-LCDM_ps = np.load('angular_ps_30.npy')
+'''LCDM_ps = np.load('angular_ps_30.npy')
 plt.imshow(np.fft.ifft2(np.fft.fft2(GRF_generator(5, [512,512]))).real+T_back2)
 plt.xlabel('degree')
 plt.ylabel('degree')
@@ -258,4 +258,19 @@ plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
+plt.show()'''
+
+x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110, 18.1667, 27.2505])
+y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 2.9496350e+17, 1.0787888e+18])
+
+fig, axs = plt.subplots(2, 1, sharex=True)
+fig.subplots_adjust(hspace=0)
+z=np.linspace(0.0001,30, 1000)
+axs[1].plot(x, y*10**-5)
+axs[1].vlines(0.216518, 2.5775220e+8, 3e13)
+axs[1].vlines(27.2505,1.0787888e+13, 3e13)
+axs[1].set(ylabel= '$P(k)\,\,\,$[mK'+'$^2$]')
+axs[1].set(xlabel='k $\,\,\,$ [1/degree]')
+axs[0].plot(z, -88.5*1/(np.pi*z) *np.sin(np.pi*z))
+axs[0].set(ylabel= '$\delta T_b^{wake}(k)\,\,\,$[mK]')
 plt.show()

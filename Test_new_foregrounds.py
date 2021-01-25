@@ -137,23 +137,22 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
-        mean, std = 253*(1420/(1+z)*1/120)**-2.8, 1.3*(1420/(1+z)*1/120)**-2.8
+        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 69
     if fg_type == 2:
-        mean, std = 38.6*(1420/(1+z)*1/151)**-2.07, 2.3*(1420/(1+z)*1/151)**-2.07
+        mean, std = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07
     if fg_type == 3:
-        mean, std = 2.2*(1420/(1+z)*1/120)**-2.15, 0.05*(1420/(1+z)*1/120)**-2.15
+        mean, std = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15
     if fg_type == 4:
-        mean, std = 1e-4*(1420/(1+z)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z)*1/(2*1e3))**-2.1
+        mean, std = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
             sum += np.abs(grf_fg[i, j]) ** 2
     sum = sum - grf_fg[0, 0] ** 2
-    for i in range(0, len(grf_fg)):
-        for j in range(0, len(grf_fg)):
-            grf_fg[i, j] = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum) * grf_fg[i, j]
+    norm = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum).real
+    grf_fg = norm * grf_fg
     grf_fg[0][0] = mean * patch_size ** 2
-    return  grf_fg, std
+    return grf_fg, std, norm
 
 
 
@@ -178,9 +177,9 @@ def foreground(l, fg_type):
        dummy = np.zeros(len(l))
        for i in range(0, len(dummy)):
            if l[i] < 1:
-               dummy[i] =A * (1100. / (1)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z) ** (2 * alpha)
+               dummy[i] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
            else:
-               dummy[i] = A * (1100. / (l[i] + 1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha * (1 + z) ** (
+               dummy[i] = A * (1100. / (l[i] + 1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha * (1 + z_wake) ** (
                            2 * alpha)  # (1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
        return dummy
     else:
@@ -188,42 +187,73 @@ def foreground(l, fg_type):
         for i in range(0,len(l)):
             for j in range(0,len(l)):
                 if l[i][j]<1:
-                    dummy[i][j] = A * (1100. / (1)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (
-                                1 + z) ** (2 *alpha)
+                    dummy[i][j] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
                 else:
-                    dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+                    dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z_wake)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
         return dummy
 
 n = 100
 chi_square = []
-for k in range(0,n):
+chi_square_nosig = []
+means=0
+stds =0
+for k in range(0, n):
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
     grf = np.random.normal(0., 1., size = (patch_size, patch_size))
-    #grf = np.random.normal(15.64, 63, size = (patch_size, patch_size))
     l = 360 * mag_k/ (2 * math.pi)
     fg = foreground(l, foreground_type)
     grf_fg = np.fft.fft2(grf)*fg**0.5*1e-3 #in Kelvin
-    grf_norm_fg, std_fg = fg_normalize(grf_fg, foreground_type)
+    grf_norm_fg, std_fg, norm = fg_normalize(grf_fg, foreground_type)
+    sig_ps = np.abs(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))**2/patch_size**2
+    filter_function = sig_ps/(fg+sig_ps)
+    #plt.imshow(np.fft.ifft2(grf_norm_fg).real)
+    #plt.colorbar()
+    #plt.show()
 
+    grf2 = np.random.normal(16, 68, size=(patch_size, patch_size))
+    grf_fg2 = np.fft.fft2(grf2) * fg ** 0.5 * 1e-3  # in Kelvin
 
+    #plt.imshow(np.fft.ifft2(grf_fg2).real)
+    #plt.colorbar()
+    #plt.show()
+    means+= np.mean(np.fft.ifft2(grf_fg2).real)
+    stds+=np.std(np.fft.ifft2(grf_fg2).real)
 
     bins = 300
-    epsilon_fgr = 1#e-2
-    data_ft =  grf_norm_fg*1e3*-delta_z*epsilon_fgr# +signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)
-    data_ps = np.abs(data_ft)**2/(patch_size**2)
-    k_bins = np.linspace(0.1, 0.95 * mag_k.max(), bins)
+    epsilon_fgr = 1e-1
+    data_ft = grf_norm_fg*1e3*-delta_z*epsilon_fgr + signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False) #in mK
+    data_ft_nosig = grf_norm_fg*1e3*-delta_z*epsilon_fgr
+    data_ps = np.abs(filter_function * data_ft)**2/(patch_size**2)
+    data_ps2 = np.abs(filter_function * data_ft_nosig) ** 2 / (patch_size ** 2)
+    fg_filtered = fg * filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2 * (69) ** 2
+    k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(mag_k, k_bins) - 1
     binned_ps = []
     for k in range(0, digi.max()):
         binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
-    chi = binned_ps/(foreground(360 * k_bin_cents/ (2 * math.pi), foreground_type)*std_fg**2*bins*delta_z**2*epsilon_fgr**2)
+    binned_ps_check = []
+    for k in range(0, digi.max()):
+        binned_ps_check.append(np.mean(data_ps2[digi == k]))
+    binned_ps_check = np.array(binned_ps_check).real
+    binned_ps_noise = []
+    for i in range(0, digi.max()):
+        binned_ps_noise.append(np.mean(fg_filtered[digi == i]))
+    binned_ps_noise = np.array(binned_ps_noise).real
+    #chi = binned_ps/(foreground(360 * k_bin_cents/ (2 * math.pi), foreground_type)*bins*delta_z**2 * epsilon_fgr**2*(69)**2)
+    #chi2 = binned_ps_check / (foreground(360 * k_bin_cents / (2 * math.pi),
+    #                              foreground_type) * bins * delta_z ** 2 * epsilon_fgr ** 2*(69)**2)
+    chi = binned_ps / (binned_ps_noise*bins)
+    chi2 = binned_ps_check / (binned_ps_noise*bins)
     chi_square.append(np.sum(chi))
-
+    chi_square_nosig.append(np.sum(chi2))
 print(np.mean(chi_square))
+print(np.mean(chi_square_nosig))
+print(means/n)
+print(stds/n)
 
 '''plt.xlabel('degree')
 plt.ylabel('degree')

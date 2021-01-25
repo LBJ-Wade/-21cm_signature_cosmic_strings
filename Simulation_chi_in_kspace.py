@@ -574,7 +574,7 @@ print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mea
 
 
 #calculate the DELTAchi^2 for N datasambles in Fourier space for foregrounds
-N = 100
+N = 10
 foreground = 1
 chi_list_signal = []
 chi_list = []
