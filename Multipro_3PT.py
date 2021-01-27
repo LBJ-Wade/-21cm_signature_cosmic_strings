@@ -268,12 +268,13 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*5)
+    np.random.seed(j*19)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
+    if foreg_type==5:
+        grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
+        grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
+        grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
     #grf2 = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
-    #np.random.seed(j)
-    #grf = 1 / np.sqrt(2) * (np.random.normal(0, 1, size=(patch_size, patch_size)) + 1.0j * np.random.normal(0, 1, size=(
-    #patch_size, patch_size)))
     #kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                          2 * math.pi * np.fft.fftfreq(N, c))
@@ -289,20 +290,32 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if fg_type == 4:
         pspectrum = foreground(l, 4)
     epsilon_fgr = 1#e-1
-    filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum))
-    grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
+    if foreg_type ==1:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
+    if foreg_type == 2:
+        filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum)*1e1)
+    if foreg_type ==5:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4)))
+    if foreg_type==3:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) * 3e3)
+    if foreg_type==4:
+        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum)*1e2)
+    if foreg_type==5:
+        grf_fg = np.fft.fft2(grf) * foreground(l, 1) ** 0.5 * 1e-3  # in Kelvin
+        grf_fg_II = np.fft.fft2(grf_II) * foreground(l, 2) ** 0.5 * 1e-3
+        grf_fg_III = np.fft.fft2(grf_III) * foreground(l, 3) ** 0.5 * 1e-3
+        grf_fg_IV = np.fft.fft2(grf_IV) * foreground(l, 4) ** 0.5 * 1e-3
+    else:
+        grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
     #grf_fg2 = grf2 * pspectrum ** 0.5 * 1e-3  # in Kelvin
-    grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
+    if foreg_type==5:
+        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1)+fg_normalize(grf_fg_II, 2)+fg_normalize(grf_fg_III, 2)+fg_normalize(grf_fg_IV, 3) )* 1e3 * -delta_z * epsilon_fgr)
+    else:
+        grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
-    #plt.imshow(np.fft.ifft2(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr).real)
-    #plt.colorbar()
-    #plt.show()
-    #ft_signal_filtered = ft_signal * ft_sig_sort/(ft_sig_sort + pspectrum) #Wien filter
-    #ft_signal_filtered = ft_signal * ft_sig_sort /pspectrum  #Matched filter
-    #ft_filtered = ft * ft_sig_sort / (ft_sig_sort + pspectrum)  # Wien filter
-    # ft_filtered = ft * ft_sig_sort /pspectrum  #Matched filter
+
     reduc = 1#e-2
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
@@ -330,9 +343,9 @@ def combine_complex(a, b):
 
 
 
-n = 100000
+n = 50000
 parts = 1000
-foreg_type = 1
+foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
@@ -359,9 +372,11 @@ print(np.abs(np.mean(threepoint_average)))
 print('With signal: ')
 print(np.abs(np.mean(threepoint_average_signal)))
 plt.hist(np.array(threepoint_average).real, bins=100)
+plt.vlines(0, 0, n/10, colors='r')
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
 plt.hist(np.array(threepoint_average_signal).real, bins=100)
+plt.vlines(0,0,n/10, colors='r')
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 

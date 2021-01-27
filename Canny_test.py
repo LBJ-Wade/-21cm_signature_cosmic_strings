@@ -1,12 +1,8 @@
 import numpy as np
 import math
 import matplotlib.pyplot as plt
-
-'''import PyCosmo as pyco
-cosmo = pyco.Cosmo()
-cosmo.set(pk_type = 'BBKS')'''
-
-
+from PIL import Image, ImageFilter
+from scipy import ndimage
 def deexitation_crosssection(t_k):
     if t_k < 1:
         return 1.38e-13
@@ -59,7 +55,7 @@ c = 5./512
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 5
+foreground_type = 1
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -93,7 +89,7 @@ theta2 = 0 #angle 2 in z-space
 T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)*(2*np.sin(theta1)**2)**-1
 wake_brightness = T_b* 1e3 #in mK
 wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2*1/np.cos(theta1)
-rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
+rot_angle_uv =np.pi/4# math.pi/4 #rotation angle in the uv plane
 wake_size_angle = [1., 1.] #in degree
 shift_wake_angle = [0, 0]
 
@@ -121,8 +117,8 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
             for l in range(i_y, f_y):
-                patch_rotated[int(np.floor(math.cos(rot_angle_uv) * (k - size/2) - math.sin(rot_angle_uv) * (l - size/2))) + size/2][
-                    int(np.floor(math.sin(rot_angle_uv) * (k - size/2) + math.cos(rot_angle_uv) * (l - size/2))) + size/2] = patch[k][l]
+                patch_rotated[int(np.floor(math.cos(rot_angle_uv) * (k - size/2) - math.sin(rot_angle_uv) * (l - size/2)) + size/2)][
+                    int(np.floor(math.sin(rot_angle_uv) * (k - size/2) + math.cos(rot_angle_uv) * (l - size/2)) + size/2)] = patch[k][l]
         for p in range(1, size-1):
             for q in range(1, size-1):
                 if np.abs(patch_rotated[p][q - 1] + patch_rotated[p - 1][q] + patch_rotated[p + 1][q] + patch_rotated[p][q + 1]) > 2 * max(np.abs(
@@ -192,117 +188,111 @@ def foreground(l, fg_type):
                     dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z_wake)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
         return dummy
 
-n = 100
-chi_square = []
-chi_square_nosig = []
-filter = True
-for k in range(0, n):
-    kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
+###################
+
+
+def sobel_filters(img):
+    Kx = np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], np.float32)
+    Ky = np.array([[1, 2, 1], [0, 0, 0], [-1, -2, -1]], np.float32)
+
+    Ix = ndimage.filters.convolve(img, Kx)
+    Iy = ndimage.filters.convolve(img, Ky)
+
+    G = np.hypot(Ix, Iy)
+    G = G / G.max() * 255
+    theta = np.arctan2(Iy, Ix)
+
+    return (G, theta)
+
+def non_max_suppression(img, D):
+    M, N = img.shape
+    Z = np.zeros((M, N), dtype=np.int32)
+    angle = D * 180. / np.pi
+    angle[angle < 0] += 180
+
+    for i in range(1, M - 1):
+        for j in range(1, N - 1):
+            try:
+                q = 255
+                r = 255
+
+                # angle 0
+                if (0 <= angle[i, j] < 22.5) or (157.5 <= angle[i, j] <= 180):
+                    q = img[i, j + 1]
+                    r = img[i, j - 1]
+                # angle 45
+                elif (22.5 <= angle[i, j] < 67.5):
+                    q = img[i + 1, j - 1]
+                    r = img[i - 1, j + 1]
+                # angle 90
+                elif (67.5 <= angle[i, j] < 112.5):
+                    q = img[i + 1, j]
+                    r = img[i - 1, j]
+                # angle 135
+                elif (112.5 <= angle[i, j] < 157.5):
+                    q = img[i - 1, j - 1]
+                    r = img[i + 1, j + 1]
+
+                if (img[i, j] >= q) and (img[i, j] >= r):
+                    Z[i, j] = img[i, j]
+                else:
+                    Z[i, j] = 0
+
+            except IndexError as e:
+                pass
+
+    return Z
+
+
+
+######################
+epsilon_fgr = 0.15*1e-2
+kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
-    mag_k = np.sqrt(kx ** 2 + ky ** 2)
-    grf = np.random.normal(0., 1., size = (patch_size, patch_size))
-    if foreground_type==5:
-        grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
-        grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
-        grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
-    grf2 = np.random.normal(0., 1., size = (patch_size, patch_size))
-    l = 360 * mag_k/ (2 * math.pi)
-    if foreground_type == 5:
-        fg = foreground(l, 1)
-        fg_II = foreground(l, 2)
-        fg_III = foreground(l, 3)
-        fg_IV = foreground(l, 4)
-    else:
-        fg = foreground(l, foreground_type)
-    if foreground_type==5:
-        grf_fg_II = np.fft.fft2(grf_II) * fg_II ** 0.5 * 1e-3
-        grf_fg_III = np.fft.fft2(grf_III) * fg_III ** 0.5 * 1e-3
-        grf_fg_IV = np.fft.fft2(grf_IV) * fg_IV ** 0.5 * 1e-3
-    grf_fg = np.fft.fft2(grf) * fg ** 0.5 * 1e-3  # in Kelvin
-    grf_fg2 = np.fft.fft2(grf2)*fg**0.5*1e-3
-    if foreground_type == 5:
-        grf_norm_fg = fg_normalize(grf_fg, 1)[0] + fg_normalize(grf_fg_II, 2)[0] + fg_normalize(grf_fg_III, 3)[0] + fg_normalize(grf_fg_IV, 4)[0]
-    else:
-        grf_norm_fg, std_fg, norm = fg_normalize(grf_fg, foreground_type)
-        grf_norm_fg2, std_fg2, norm2 = fg_normalize(grf_fg2, foreground_type)
-    sig_ps = np.abs(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))**2/patch_size**2
-    #plt.imshow(np.fft.ifft2(grf_norm_fg).real)
-    #plt.colorbar()
-    #plt.show()
-    #plt.imshow(np.fft.ifft2(grf_fg2).real)
-    #plt.colorbar()
-    #plt.show()
+mag_k = np.sqrt(kx ** 2 + ky ** 2)
+grf = np.random.normal(0., 1., size = (patch_size, patch_size))
+grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
+grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
+grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
 
-    bins = 300
-    epsilon_fgr = 1#e-3
-    if foreground_type==5:
-        filter_function = sig_ps / (fg+fg_II+fg_III+fg_IV + sig_ps)
-    else:
-        filter_function = sig_ps / (fg + sig_ps)
-    #if foreground_type==5:
-    #    data_ft = grf_norm_fg * 1e3 * -delta_z * epsilon_fgr + signal_ft(patch_size, wake_size_angle, angle_per_pixel, shift_wake_angle, False)  # in mK
-    #    data_ft_nosig = grf_norm_fg * 1e3 * -delta_z * epsilon_fgr
-    #else:
-    data_ft = grf_norm_fg*1e3*-delta_z*epsilon_fgr + signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False) #in mK
-    if foreground_type==5:
-        data_ft_nosig = grf_norm_fg*1e3*-delta_z*epsilon_fgr
-    else:
-        data_ft_nosig = grf_norm_fg * 1e3 * -delta_z * epsilon_fgr
-    if filter ==True:
-        data_ps = np.abs(filter_function * data_ft)**2/(patch_size**2)
-        data_ps2 = np.abs(filter_function * data_ft_nosig) ** 2 / (patch_size ** 2)
-    else:
-        data_ps = np.abs( data_ft) ** 2 / (patch_size ** 2)
-        data_ps2 = np.abs( data_ft_nosig) ** 2 / (patch_size ** 2)
-    if filter == True:
-        if foreground_type==5:
-            fg_filtered = (fg*69**2 + fg_II*1410**2 + fg_III*415**2+ fg_IV*81**2 )* filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2
-        else:
-            fg_filtered = fg * filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2 * (std_fg) ** 2
-    k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
-    k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
-    digi = np.digitize(mag_k, k_bins) - 1
-    binned_ps = []
-    for k in range(0, digi.max()):
-        binned_ps.append(np.mean(data_ps[digi == k]))
-    binned_ps = np.array(binned_ps).real
-    binned_ps_check = []
-    for k in range(0, digi.max()):
-        binned_ps_check.append(np.mean(data_ps2[digi == k]))
-    binned_ps_check = np.array(binned_ps_check).real
-    if filter == True:
-        binned_ps_noise = []
-        for i in range(0, digi.max()):
-            binned_ps_noise.append(np.mean(fg_filtered[digi == i]))
-        binned_ps_noise = np.array(binned_ps_noise).real
-    if filter == True:
-        chi = binned_ps / (binned_ps_noise * bins)
-        chi2 = binned_ps_check / (binned_ps_noise * bins)
-    else:
-        if foreground_type == 5:
-            chi = binned_ps / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*69**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*1410**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*415**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*81**2) * bins * delta_z ** 2 * epsilon_fgr ** 2 )
-            chi2 = binned_ps_check / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*69**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*1410**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*415**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*81**2) * bins * delta_z ** 2 * epsilon_fgr ** 2)
-        else:
-            chi = binned_ps/(foreground(360 * k_bin_cents/ (2 * math.pi), foreground_type)*bins*delta_z**2 * epsilon_fgr**2*(std_fg)**2)
-            chi2 = binned_ps_check / (foreground(360 * k_bin_cents / (2 * math.pi), foreground_type) * bins * delta_z ** 2 * epsilon_fgr ** 2*(std_fg)**2)
-    chi_square.append(np.sum(chi))
-    chi_square_nosig.append(np.sum(chi2))
-print(np.mean(chi_square))
-print(np.mean(chi_square_nosig))
+fg = foreground(180*mag_k/np.pi, 1)
+fg_II = foreground(180*mag_k/np.pi, 2)
+fg_III = foreground(180*mag_k/np.pi, 3)
+fg_IV = foreground(180*mag_k/np.pi, 4)
+
+grf_fg = np.fft.fft2(grf) * fg ** 0.5 * 1e-3
+grf_fg_II = np.fft.fft2(grf_II) * fg_II ** 0.5 * 1e-3
+grf_fg_III = np.fft.fft2(grf_III) * fg_III ** 0.5 * 1e-3
+grf_fg_IV = np.fft.fft2(grf_IV) * fg_IV ** 0.5 * 1e-3
+
+grf_norm_fg, std_fg, norm = fg_normalize(grf_fg, foreground_type)
+grf_norm_fg_IV, std_fg_IV, norm_IV = fg_normalize(grf_fg_IV, foreground_type)
+grf_norm_fg_II, std_fg_II, norm_II = fg_normalize(grf_fg_II, foreground_type)
+grf_norm_fg_III, std_fg_III, norm_III = fg_normalize(grf_fg_III, foreground_type)
+
+data_ft = (grf_norm_fg + grf_norm_fg_II + grf_norm_fg_III + grf_norm_fg_IV)*1e3*-delta_z*epsilon_fgr
+data_real = np.fft.ifft2(data_ft).real
+############
+data_real_norm = (data_real-data_real.min())*255/(data_real.max()-data_real.min())
+############
+for i in range(0, len(data_real_norm)):
+    for j in range(0, len(data_real_norm)):
+        data_real_norm[i,j] = int(np.round(data_real_norm[i,j]))
+sig = np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real
+############
+sig_norm = ((sig-sig.min())*255/(sig.max()-sig.min()))
+############
+both = data_real + sig
+############
+both_norm = ((both-both.min())*255/(both.max()-both.min()))
+############
+
+'''im = Image.fromarray(both_norm)
+im = im.convert('L')
+im = im.filter(ImageFilter.FIND_EDGES)
+im.show()'''
 
 
-'''plt.xlabel('degree')
-plt.ylabel('degree')
-my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
-plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
-plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
-plt.imshow(np.fft.ifft2(    grf_norm_fg   ).real)
-cbar = plt.colorbar()
-cbar.set_label('$ T_b \,\,\,[$'+'K'+'$]$', rotation=270, labelpad=20, size=11 )
-plt.show()'''
-
-
-'''x= np.linspace(0,1,1000)
-y= cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=x)
-plt.loglog(x,y)
-plt.show()'''
+G, theta = sobel_filters(both_norm)
+plt.imshow(G)
+plt.show()
