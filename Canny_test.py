@@ -2,7 +2,7 @@ import numpy as np
 import math
 import matplotlib.pyplot as plt
 from PIL import Image, ImageFilter
-from scipy import ndimage
+from scipy import ndimage, misc
 def deexitation_crosssection(t_k):
     if t_k < 1:
         return 1.38e-13
@@ -244,9 +244,8 @@ def non_max_suppression(img, D):
     return Z
 
 
-
 ######################
-epsilon_fgr = 0.15*1e-2
+epsilon_fgr = 0.3e-2#with kernel #0.15*1e-2 without kernel
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
@@ -293,6 +292,16 @@ im = im.filter(ImageFilter.FIND_EDGES)
 im.show()'''
 
 
-G, theta = sobel_filters(both_norm)
+both_GF = ndimage.gaussian_filter(both_norm, sigma=2.)
+
+fig = plt.figure()
+ax1 = fig.add_subplot(121)  # left side
+ax2 = fig.add_subplot(122)  # right side
+ax1.imshow(both)
+ax2.imshow(both_GF)
+plt.show()
+
+
+G, theta = sobel_filters(both_GF)
 plt.imshow(G)
 plt.show()
