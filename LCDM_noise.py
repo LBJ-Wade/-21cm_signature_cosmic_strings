@@ -344,20 +344,35 @@ def rfftfreq(n, d=1.0):
 
 
 def LCDM(l):
-    dummy = np.zeros((l.shape[0], l.shape[1]))
-    for i in range(0, len(dummy)):
-        for j in range(0, len(dummy[0])):
-            l_bottom = math.floor(l[i][j])
-            l_top = l_bottom + 1
-            delta_l = l[i,j] - l_bottom
-            if l_bottom == 0:
-                if l[i][j] < 0.1:
-                    dummy[i][j] = LCDM_ps[0]
+    if l[1].ndim == 0:
+       dummy = np.zeros(len(l))
+       for i in range(0, len(dummy)):
+           l_bottom = math.floor(l[i])
+           l_top = l_bottom + 1
+           delta_l = l[i] - l_bottom
+           if l_bottom == 0:
+               if l[i] < 0.1:
+                   dummy[i] = LCDM_ps[0]
+               else:
+                   dummy[i] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+           else:
+               dummy[i] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+       return dummy
+    else:
+        dummy = np.zeros((len(l), len(l[1])))
+        for i in range(0, len(l)):
+            for j in range(0, len(l[1])):
+                l_bottom = math.floor(l[i][j])
+                l_top = l_bottom + 1
+                delta_l = l[i, j] - l_bottom
+                if l_bottom == 0:
+                    if l[i][j] < 0.1:
+                        dummy[i][j] = LCDM_ps[0]
+                    else:
+                        dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
                 else:
                     dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
-            else:
-                dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
-    return dummy
+        return dummy
 
 
 def GRF_generator(ang, shape, seed=None):
@@ -427,16 +442,39 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
+bins=300
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
-grf = np.random.normal(0., 1., size = (patch_size, patch_size))
 LCDM_ps = np.load('angular_ps_25.npy')
-#plt.imshow((GRF_generator(5, [512,512])-2.752*(1+z)*1e3)/(1+z)*-delta_z + np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
-plt.imshow((np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real*360/(5.*2*np.pi)*N-2.752*(1+z)*1e3)/(1+z))
+n = 1
+chii = np.zeros(n)
+for i in range(0, n):
+    grf = np.random.normal(-1.1612e6, 189, size=(patch_size, patch_size))
+    fake_field = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real
+    data_ps = np.abs(np.fft.fft2(fake_field))**2/N**2
+    k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
+    k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
+    digi = np.digitize(mag_k, k_bins) - 1
+    binned_ps = []
+    for k in range(0, digi.max()):
+        binned_ps.append(np.mean(data_ps[digi == k]))
+    binned_ps = np.array(binned_ps).real
+    chi = binned_ps/(LCDM(360 * k_bin_cents/(2 * math.pi))*bins*189**2)
+    chii[i] = np.sum(chi)
+print(np.mean(chii))
+
+grf = np.random.normal(-1.1612e6, 189*(1+30)/(1+z), size=(patch_size, patch_size))
+fake_field = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real
+plt.imshow(fake_field)
 plt.colorbar()
-plt.show()
-plt.imshow((GRF_generator(5, [512,512])-2.752*(1+z)*1e3)/(1+z))
+#plt.show()
+print(np.mean(fake_field))
+print(np.std(fake_field))
+
+
+
+plt.imshow((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake))
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -444,9 +482,11 @@ plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
-plt.show()
-print(np.mean(GRF_generator(5, [512,512])))
-print(np.mean(np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real*360/(5.*2*np.pi)*N))
+print(np.mean((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
+print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
+print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake))*26/31)
+#plt.show()
+
 
 
 
