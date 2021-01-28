@@ -59,7 +59,7 @@ c = 5./512
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 6
+foreground_type = 5
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -135,7 +135,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 
-def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
+def fg_normalize(grf_fg, fg_type):#theorem of parselval
     if fg_type == 1:
         mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 69
     if fg_type == 2:
@@ -231,10 +231,10 @@ def LCDM(l):
 
 
 
-n = 100
+n = 10
 chi_square = []
 chi_square_nosig = []
-filter = False
+filter = True
 LCDM_ps = np.load('angular_ps_30.npy')
 for k in range(0, n):
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
@@ -277,7 +277,7 @@ for k in range(0, n):
     #plt.show()
 
     bins = 300
-    epsilon_fgr = 1#e-3
+    epsilon_fgr = 1e-2
     if foreground_type==5:
         filter_function = sig_ps / (fg+fg_II+fg_III+fg_IV+fg_LCDM + sig_ps)
     else:
@@ -290,7 +290,7 @@ for k in range(0, n):
     if foreground_type==5:
         data_ft_nosig = grf_norm_fg * 1e3 * -delta_z * epsilon_fgr
     else:
-        data_ft_nosig = grf_norm_fg *1e3*-delta_z * epsilon_fgr
+        data_ft_nosig = grf_norm_fg2 *1e3 * -delta_z * epsilon_fgr
     if filter ==True:
         data_ps = np.abs(filter_function * data_ft)**2/(patch_size**2)
         data_ps2 = np.abs(filter_function * data_ft_nosig) ** 2 / (patch_size ** 2)

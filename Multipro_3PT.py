@@ -159,25 +159,46 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
-        mean, std = 253*(1420/(1+z)*1/120)**-2.8, 1.3*(1420/(1+z)*1/120)**-2.8
+        mean, std, std_eff = 253 * (1420 / (1 + z_wake) * 1 / 120) ** -2.8, 1.3 * (
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69
     if fg_type == 2:
-        mean, std = 38.6*(1420/(1+z)*1/151)**-2.07, 2.3*(1420/(1+z)*1/151)**-2.07
+        mean, std, std_eff = 38.6 * (1420 / (1 + z_wake) * 1 / 151) ** -2.07, 2.3 * (
+                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410
     if fg_type == 3:
-        mean, std = 2.2*(1420/(1+z)*1/120)**-2.15, 0.05*(1420/(1+z)*1/120)**-2.15
+        mean, std, std_eff = 2.2 * (1420 / (1 + z_wake) * 1 / 120) ** -2.15, 0.05 * (
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415
     if fg_type == 4:
-        mean, std = 1e-4*(1420/(1+z)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z)*1/(2*1e3))**-2.1
+        mean, std, std_eff = 1e-4 * (1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 1e-5 * (
+                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81
+    if fg_type == 6:
+        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
             sum += np.abs(grf_fg[i, j]) ** 2
     sum = sum - grf_fg[0, 0] ** 2
-    for i in range(0, len(grf_fg)):
-        for j in range(0, len(grf_fg)):
-            grf_fg[i, j] = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum) * grf_fg[i, j]
+    norm = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum).real
+    grf_fg = norm * grf_fg
     grf_fg[0][0] = mean * patch_size ** 2
-    return  grf_fg
+    return grf_fg #, std_eff, norm
 
 
+
+def LCDM(l):
+    dummy = np.zeros((N, N))
+    for i in range(0,len(l)):
+        for j in range(0,len(l)):
+            l_bottom = math.floor(l[i][j])
+            l_top = l_bottom + 1
+            delta_l = l[i, j] - l_bottom
+            if l_bottom == 0:
+                if l[i][j] < 0.1:
+                    dummy[i][j] = LCDM_ps[0]
+                else:
+                    dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+            else:
+                dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
+    return dummy
 
 
 #deep21 arXiv:2010.15843       A  beta  alpha Xi   type
@@ -196,6 +217,8 @@ def foreground(l, fg_type):
         A, beta, alpha = 0.088, 3.0, 2.15
     if fg_type == 4:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/421241/pdf --> uncertainty at least two orders of magnitude
         A, beta, alpha = 0.014, 1.0, 2.10
+    if fg_type == 6:
+        return LCDM(l)
     dummy = np.zeros((N,N))
     for i in range(0,len(l)):
         for j in range(0,len(l)):
@@ -268,12 +291,13 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*19)
+    np.random.seed(j*23)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
+        grf_LCDM = np.random.normal(0., 1., size=(patch_size, patch_size))
     #grf2 = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     #kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
@@ -289,13 +313,15 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         pspectrum = foreground(l, 3)
     if fg_type == 4:
         pspectrum = foreground(l, 4)
+    if fg_type == 6:
+        pspectrum = foreground(l, 6)
     epsilon_fgr = 1#e-1
     if foreg_type ==1:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 2:
         filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum)*1e1)
     if foreg_type ==5:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4)))
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) +foreground(l, 6)))
     if foreg_type==3:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) * 3e3)
     if foreg_type==4:
@@ -305,11 +331,12 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         grf_fg_II = np.fft.fft2(grf_II) * foreground(l, 2) ** 0.5 * 1e-3
         grf_fg_III = np.fft.fft2(grf_III) * foreground(l, 3) ** 0.5 * 1e-3
         grf_fg_IV = np.fft.fft2(grf_IV) * foreground(l, 4) ** 0.5 * 1e-3
+        grf_fg_LCDM = np.fft.fft2(grf_LCDM) * foreground(l, 6) ** 0.5 * 1e-3
     else:
         grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
     #grf_fg2 = grf2 * pspectrum ** 0.5 * 1e-3  # in Kelvin
     if foreg_type==5:
-        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1)+fg_normalize(grf_fg_II, 2)+fg_normalize(grf_fg_III, 2)+fg_normalize(grf_fg_IV, 3) )* 1e3 * -delta_z * epsilon_fgr)
+        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6))* 1e3 * -delta_z * epsilon_fgr)
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
@@ -343,15 +370,15 @@ def combine_complex(a, b):
 
 
 
-n = 50000
-parts = 1000
+n = 10
+parts = 1
 foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
-
+LCDM_ps = np.load('angular_ps_30.npy')
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):
