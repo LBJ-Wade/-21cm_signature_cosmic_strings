@@ -291,7 +291,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*23)
+    np.random.seed(j*29)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -326,6 +326,8 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) * 3e3)
     if foreg_type==4:
         filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum)*1e2)
+    if foreg_type == 6:
+        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type==5:
         grf_fg = np.fft.fft2(grf) * foreground(l, 1) ** 0.5 * 1e-3  # in Kelvin
         grf_fg_II = np.fft.fft2(grf_II) * foreground(l, 2) ** 0.5 * 1e-3
@@ -370,8 +372,8 @@ def combine_complex(a, b):
 
 
 
-n = 10
-parts = 1
+n = 70000
+parts = 1000
 foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
@@ -399,11 +401,11 @@ print(np.abs(np.mean(threepoint_average)))
 print('With signal: ')
 print(np.abs(np.mean(threepoint_average_signal)))
 plt.hist(np.array(threepoint_average).real, bins=100)
-plt.vlines(0, 0, n/10, colors='r')
+plt.vlines(0, 0, 1.4*n/10, colors='r')
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
 plt.hist(np.array(threepoint_average_signal).real, bins=100)
-plt.vlines(0,0,n/10, colors='r')
+plt.vlines(0,0,1.4*n/10, colors='r')
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 
