@@ -200,7 +200,7 @@ N = 512
 patch_size = N
 c = 5./512
 angle_per_pixel =c
-z = 30
+z = 25
 ####################
 foreground_type = 5
 ####################
@@ -374,7 +374,6 @@ def GRF_generator(ang, shape, seed=None):
 
     # Compute the multipole moment of each FFT pixel
     l = np.sqrt(lx[np.newaxis, :] ** 2 + ly[:, np.newaxis] ** 2)
-
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
@@ -428,9 +427,16 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
-LCDM_ps = np.load('angular_ps_30.npy')
+kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
+                             2 * math.pi * np.fft.fftfreq(N, c))
+mag_k = np.sqrt(kx ** 2 + ky ** 2)
+grf = np.random.normal(0., 1., size = (patch_size, patch_size))
+LCDM_ps = np.load('angular_ps_25.npy')
 #plt.imshow((GRF_generator(5, [512,512])-2.752*(1+z)*1e3)/(1+z)*-delta_z + np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
-plt.imshow((GRF_generator(5, [512,512])-2.752*(1+z)*1e3)/(1+z)*-delta_z)
+plt.imshow((np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real*360/(5.*2*np.pi)*N-2.752*(1+z)*1e3)/(1+z))
+plt.colorbar()
+plt.show()
+plt.imshow((GRF_generator(5, [512,512])-2.752*(1+z)*1e3)/(1+z))
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -439,6 +445,8 @@ plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 plt.show()
+print(np.mean(GRF_generator(5, [512,512])))
+print(np.mean(np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real*360/(5.*2*np.pi)*N))
 
 
 
