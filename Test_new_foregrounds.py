@@ -55,11 +55,11 @@ def deexitation_crosssection(t_k):
 
 N = 512
 patch_size = N
-c = 5./512
+c = 50./512
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 5
+foreground_type = 1
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -234,7 +234,7 @@ def LCDM(l):
 n = 10
 chi_square = []
 chi_square_nosig = []
-filter = True
+filter = False
 LCDM_ps = np.load('angular_ps_30.npy')
 for k in range(0, n):
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
@@ -277,7 +277,7 @@ for k in range(0, n):
     #plt.show()
 
     bins = 300
-    epsilon_fgr = 1e-2
+    epsilon_fgr = 1e-3
     if foreground_type==5:
         filter_function = sig_ps / (fg+fg_II+fg_III+fg_IV+fg_LCDM + sig_ps)
     else:
@@ -290,7 +290,7 @@ for k in range(0, n):
     if foreground_type==5:
         data_ft_nosig = grf_norm_fg * 1e3 * -delta_z * epsilon_fgr
     else:
-        data_ft_nosig = grf_norm_fg2 *1e3 * -delta_z * epsilon_fgr
+        data_ft_nosig = grf_norm_fg *1e3 * -delta_z * epsilon_fgr
     if filter ==True:
         data_ps = np.abs(filter_function * data_ft)**2/(patch_size**2)
         data_ps2 = np.abs(filter_function * data_ft_nosig) ** 2 / (patch_size ** 2)
@@ -332,6 +332,7 @@ for k in range(0, n):
     chi_square_nosig.append(np.sum(chi2))
 print(np.mean(chi_square))
 print(np.mean(chi_square_nosig))
+print(np.abs(np.mean(chi_square)-np.mean(chi_square_nosig)))
 
 
 '''plt.xlabel('degree')

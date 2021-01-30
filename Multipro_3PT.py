@@ -371,7 +371,6 @@ def combine_complex(a, b):
     return dummy
 
 
-
 n = 70000
 parts = 1000
 foreg_type = 5
@@ -401,11 +400,11 @@ print(np.abs(np.mean(threepoint_average)))
 print('With signal: ')
 print(np.abs(np.mean(threepoint_average_signal)))
 plt.hist(np.array(threepoint_average).real, bins=100)
-plt.vlines(0, 0, 1.4*n/10, colors='r')
+plt.vlines(0, 0, 4000, colors='r')
 plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
 plt.hist(np.array(threepoint_average_signal).real, bins=100)
-plt.vlines(0,0,1.4*n/10, colors='r')
+plt.vlines(0, 0, 4000, colors='r')
 plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 

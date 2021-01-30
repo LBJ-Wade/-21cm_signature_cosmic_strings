@@ -200,7 +200,7 @@ N = 512
 patch_size = N
 c = 5./512
 angle_per_pixel =c
-z = 25
+z = 20
 ####################
 foreground_type = 5
 ####################
@@ -442,15 +442,20 @@ def GRF_spec(kappa, l_edges, ang):
     return l_edges[:-1] + np.diff(l_edges) / 2.0, power_spectrum
 
 
+
+
+
+#############################
+
 bins=300
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 LCDM_ps = np.load('angular_ps_25.npy')
-n = 1
+n = 10
 chii = np.zeros(n)
 for i in range(0, n):
-    grf = np.random.normal(-1.1612e6, 189, size=(patch_size, patch_size))
+    grf = np.random.normal(-1.1612e6, 189*(1+30)/(1+z), size=(patch_size, patch_size))
     fake_field = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real
     data_ps = np.abs(np.fft.fft2(fake_field))**2/N**2
     k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
@@ -484,7 +489,6 @@ cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
 print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
-print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake))*26/31)
 #plt.show()
 
 
@@ -496,8 +500,8 @@ print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wak
 
 
 
-'''
-x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110,14])
+
+'''x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110,14])
 y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 1.5238e+17])
 
 fig, axs = plt.subplots(2, 1, sharex=True)
@@ -507,8 +511,8 @@ a=np.linspace(0.2, 15, 100)
 axs[1].plot(x, y*10**-5, label='$P_{inst}$')
 axs[1].plot(a, foreground(180*a/np.pi, 1)*1e1 , label='$P_{fg1}\cdot 10^1$')
 axs[1].plot(a, foreground(180*a/np.pi, 2)*1e7 , label='$P_{fg2}\cdot 10^7$')
-axs[1].plot(a, foreground(180*a/np.pi, 3)*0.5e6 , label='$P_{fg2}\cdot 0.5\cdot 10^6$')
-axs[1].plot(a, foreground(180*a/np.pi, 4)*1e11 , label='$P_{fg2}\cdot 10^{11}$')
+axs[1].plot(a, foreground(180*a/np.pi, 3)*0.5e6 , label='$P_{fg3}\cdot 0.5\cdot 10^6$')
+axs[1].plot(a, foreground(180*a/np.pi, 4)*1e11 , label='$P_{fg4}\cdot 10^{11}$')
 
 axs[1].vlines(0.216518, 2.5775220e+8, 1e13)
 #axs[1].vlines(27.2505,1.0787888e+13, 3e13)
