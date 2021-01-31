@@ -160,7 +160,7 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
         mean, std, std_eff = 253 * (1420 / (1 + z_wake) * 1 / 120) ** -2.8, 1.3 * (
-                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 66*(angle_per_pixel*512/5)**(-3.3/2)
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69*(angle_per_pixel*512/5)**(-3.3/2)
     if fg_type == 2:
         mean, std, std_eff = 38.6 * (1420 / (1 + z_wake) * 1 / 151) ** -2.07, 2.3 * (
                     1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410*(angle_per_pixel*512/5)**(-1.1/2)
