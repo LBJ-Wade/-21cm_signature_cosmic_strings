@@ -59,7 +59,7 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 5. #in degree
+patch_angle = 50. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = 512
@@ -171,7 +171,7 @@ def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
         mean, std, std_eff = 1e-4 * (1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 1e-5 * (
                     1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
     if fg_type == 6:
-        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)
+        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)*(angle_per_pixel*512/5)**(-2.0/2)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -371,7 +371,7 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 70000
+n = 10000
 parts = 1000
 foreg_type = 5
 

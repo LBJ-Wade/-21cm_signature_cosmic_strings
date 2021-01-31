@@ -198,7 +198,7 @@ def deexitation_crosssection(t_k):
 
 N = 512
 patch_size = N
-c = 5./512
+c = 20./512
 angle_per_pixel =c
 z = 30
 ####################
@@ -287,6 +287,8 @@ def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
         mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*(angle_per_pixel*512/5)**(-3.0/2)
     if fg_type == 4:
         mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
+    if fg_type == 6:
+        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*(angle_per_pixel*512/5)**(-2.0/2)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -392,7 +394,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = foreground(l, 1)
+    Pl = LCDM(l)
 
     real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -452,7 +454,7 @@ kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 #print(180*mag_k[0]/np.pi)
-LCDM_ps = np.load('angular_ps_25.npy')
+LCDM_ps = np.load('angular_ps_30.npy')
 n = 1
 chii = np.zeros(n)
 for i in range(0, n):
@@ -472,20 +474,20 @@ for i in range(0, n):
 
 mean=[]
 std=[]
-for k in range(0, 100):
-    grf1 = np.random.normal(112412.7, 415*(c*512/5)**(-3.0/2), size=(patch_size, patch_size))
-    fake_field1 = np.fft.ifft2(foreground(180*mag_k/np.pi, 3)**0.5*np.fft.fft2(grf1)*1e-3).real
+for k in range(0, 50):
+    grf1 = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel*512/5)**(-2./2), size=(patch_size, patch_size))
+    fake_field1 = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf1)).real
     mean.append(np.mean(fake_field1))
     std.append(np.std(fake_field1))
 print(np.mean(mean))
 print(np.mean(std))
 
 grf = np.random.normal(0, 1, size=(patch_size, patch_size))
-fake_field = foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)
-print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 3)[0]).real))
-print(np.std(np.fft.ifft2(fg_normalize(fake_field, 3)[0]).real))
+fake_field = LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)
+print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
+print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
 
-'''plt.imshow((GRF_generator(5, [512,512])))
+plt.imshow((GRF_generator(5, [512,512])))
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -493,8 +495,8 @@ plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
-print(np.mean(GRF_generator(5, [512,512])))
-print(np.std(GRF_generator(5, [512,512])))
+print(np.mean((GRF_generator(20, [512,512])+T_back2-1e3*2.725*(1+z))/(1+z)))
+print(np.std((GRF_generator(20, [512,512])+T_back2-1e3*2.725*(1+z))/(1+z)))
 #plt.show()'''
 
 

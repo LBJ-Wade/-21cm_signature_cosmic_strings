@@ -145,7 +145,7 @@ def fg_normalize(grf_fg, fg_type):#theorem of parselval
     if fg_type == 4:
         mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*((angle_per_pixel*512/5.)**(-1.0/2))
     if fg_type == 6:
-        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)
+        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*((angle_per_pixel*512/5.)**(-2.0/2))
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):

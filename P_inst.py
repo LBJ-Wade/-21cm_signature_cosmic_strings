@@ -335,8 +335,8 @@ def rfftfreq(n, d=1.0):
     return results * val
 
 
-def Pinst(l, n_u):
-    return (((1420.*1e6/(1+z))**-1 * scipy.constants.c)**2 * T_sys**2 * N_p)/(n_u * t_tot * d_nu * A_e**2)
+def Pinst( n_u):
+    return (((1420.*1e6/(1+z))**-1 * scipy.constants.c)**2 * T_sys**2 * N_p)/((n_u) * t_tot * d_nu * A_e**2)
 
 
 
@@ -371,10 +371,10 @@ def GRF_generator(ang, shape, seed=None):
 #https://arxiv.org/pdf/1206.6945.pdf
 z = 30 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
-T_inst = 100#T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
+T_inst = 100*1e3#T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
 T_sys = T_sky + T_inst #temperature
 N_d = 256 #numper of tiles, 1 tile are 16 antennas, effective area per tile see below, for MWA II: https://core.ac.uk/download/pdf/195695824.pdf
-N_p = 0 #number of pointings: N_p Omega_p = 4 Pi f_sky
+N_p = 10 #number of pointings: N_p Omega_p = 4 Pi f_sky
 A_e = 21.5 #effective total dish area, source: The EoR sensitivity of the Murchison Widefield Array
 #D_min =14 #smallest baseling in m
 #D_max = 5300 #longest baseline in m for MWA II: "The Phase II Murchison Widefield Array: Design overview"
@@ -385,7 +385,7 @@ d_nu = 0.01*1e6 #bandwidth in Hz in that channel: 10kHz
 
 
 #read in MWA config, Phase I + II
-antennafile = open('256T_update2.txt', 'r')
+antennafile = open('256T_update.txt', 'r')
 dist_ns = []
 dist_ew = []
 for line in antennafile.readlines():
@@ -393,7 +393,7 @@ for line in antennafile.readlines():
     dist_ns.append(float(fields[2]))
     dist_ew.append(float(fields[3]))
 antennafile.close()
-print(dist_ns)
+
 
 
 
@@ -404,8 +404,13 @@ array_conf = HIRAXArrayConfig(d_ns=dist_ns, d_ew=dist_ew, Ddish=2*np.sqrt(A_e/np
 
 u, nu = array_conf.nu(fid_freq=1420./(1+z))
 
-plt.plot(u, nu)
+'''plt.plot(u, nu)
 plt.show()
+plt.plot(u, np.sqrt(Pinst(nu)))
+plt.yscale('log')
+plt.show()'''
 
 plt.plot(dist_ew, dist_ns, 'rx')
-#plt.show()
+plt.xlabel('meters')
+plt.ylabel('meters')
+plt.show()
