@@ -53,13 +53,13 @@ def deexitation_crosssection(t_k):
 
 
 
-N = 512
+N = 256
 patch_size = N
-c = 5./512
+c = 5./N
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 1
+foreground_type = 5
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -137,15 +137,15 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 def fg_normalize(grf_fg, fg_type):#theorem of parselval
     if fg_type == 1:
-        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 69*(angle_per_pixel*512/5)**(-3.3/2)
+        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 69*(angle_per_pixel/(5/512))**(-3.3/2)
     if fg_type == 2:
-        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410*((angle_per_pixel*512/5.)**(-1.1/2))
+        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410*((angle_per_pixel/(5/512))**(-1.1/2))
     if fg_type == 3:
-        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*((angle_per_pixel*512/5.)**(-3.0/2))
+        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*((angle_per_pixel/(5/512))**(-3.0/2))
     if fg_type == 4:
-        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*((angle_per_pixel*512/5.)**(-1.0/2))
+        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*((angle_per_pixel/(5/512))**(-1.0/2))
     if fg_type == 6:
-        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*((angle_per_pixel*512/5.)**(-2.0/2))
+        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*((angle_per_pixel/(5/512))**(-2.0/2))
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -177,6 +177,7 @@ def foreground(l, fg_type):
         A, beta, alpha = 0.014, 1.0, 2.10
     if fg_type == 6:
         return LCDM(l)
+    #A = A * 1e-2
     if l[1].ndim == 0:
        dummy = np.zeros(len(l))
        for i in range(0, len(dummy)):
@@ -231,10 +232,10 @@ def LCDM(l):
 
 
 
-n = 100
+n = 200
 chi_square = []
 chi_square_nosig = []
-filter = False
+filter = True
 LCDM_ps = np.load('angular_ps_30.npy')
 for k in range(0, n):
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
@@ -279,7 +280,7 @@ for k in range(0, n):
     bins = 300
 
 
-    epsilon_fgr = 1e-1
+    epsilon_fgr = 1e-3
 
 
     if foreground_type==5:
@@ -303,7 +304,7 @@ for k in range(0, n):
         data_ps2 = np.abs( data_ft_nosig) ** 2 / (patch_size ** 2)
     if filter == True:
         if foreground_type==5:
-            fg_filtered = (fg*(69*(angle_per_pixel*512/5)**(-3.3/2))**2 + fg_II*(1410*(angle_per_pixel*512/5)**(-1.1/2))**2 + fg_III*(415*(angle_per_pixel*512/5)**(-3.0/2))**2+ fg_IV*(81*(angle_per_pixel*512/5)**(-1.0/2))**2 + fg_LCDM*189**2)* filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2
+            fg_filtered = (fg*(69*(angle_per_pixel/(5/512))**(-3.3/2))**2 + fg_II*(1410*(angle_per_pixel/(5/512))**(-1.1/2))**2 + fg_III*(415*(angle_per_pixel/(5/512))**(-3.0/2))**2+ fg_IV*(81*(angle_per_pixel/(5/512))**(-1.0/2))**2 + fg_LCDM*189**2)* filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2
         else:
             fg_filtered = fg * filter_function**2 * delta_z ** 2 * epsilon_fgr ** 2 * (std_fg) ** 2
     k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
@@ -311,24 +312,33 @@ for k in range(0, n):
     digi = np.digitize(mag_k, k_bins) - 1
     binned_ps = []
     for k in range(0, digi.max()):
-        binned_ps.append(np.mean(data_ps[digi == k]))
+        if len(data_ps[digi == k]) < 1:
+            binned_ps.append(1)
+        else:
+            binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
     binned_ps_check = []
     for k in range(0, digi.max()):
-        binned_ps_check.append(np.mean(data_ps2[digi == k]))
+        if len(data_ps2[digi == k]) < 1:
+            binned_ps_check.append(1)
+        else:
+            binned_ps_check.append(np.mean(data_ps2[digi == k]))
     binned_ps_check = np.array(binned_ps_check).real
     if filter == True:
         binned_ps_noise = []
         for i in range(0, digi.max()):
-            binned_ps_noise.append(np.mean(fg_filtered[digi == i]))
+            if len(fg_filtered[digi == i])<1:
+                binned_ps_noise.append(1)
+            else:
+                binned_ps_noise.append(np.mean(fg_filtered[digi == i]))
         binned_ps_noise = np.array(binned_ps_noise).real
     if filter == True:
         chi = binned_ps / (binned_ps_noise * bins)
         chi2 = binned_ps_check / (binned_ps_noise * bins)
     else:
         if foreground_type == 5:
-            chi = binned_ps / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*(69*(angle_per_pixel*512/5)**(-3.3/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*(1410*(angle_per_pixel*512/5)**(-1.1/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*(415*(angle_per_pixel*512/5)**(-3.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*(81*(angle_per_pixel*512/5)**(-1.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 6)*189**2) * bins * delta_z ** 2 * epsilon_fgr ** 2 )
-            chi2 = binned_ps_check / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*(69*(angle_per_pixel*512/5)**(-3.3/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*(1410*(angle_per_pixel*512/5)**(-1.1/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*(415*(angle_per_pixel*512/5)**(-3.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*(81*(angle_per_pixel*512/5)**(-1.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 6)*189**2) * bins * delta_z ** 2 * epsilon_fgr ** 2 )
+            chi = binned_ps / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*(69*(angle_per_pixel/(5/512))**(-3.3/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*(1410*(angle_per_pixel/(5/512))**(-1.1/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*(415*(angle_per_pixel/(5/512))**(-3.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*(81*(angle_per_pixel/(5/512))**(-1.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 6)*(189*(angle_per_pixel/(5/512))**(-2.0/2))**2) * bins * delta_z ** 2 * epsilon_fgr ** 2 )
+            chi2 = binned_ps_check / ((foreground(360 * k_bin_cents / (2 * math.pi),1)*(69*(angle_per_pixel/(5/512))**(-3.3/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 2)*(1410*(angle_per_pixel/(5/512))**(-1.1/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 3)*(415*(angle_per_pixel/(5/512))**(-3.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 4)*(81*(angle_per_pixel/(5/512))**(-1.0/2))**2 + foreground(360 * k_bin_cents / (2 * math.pi), 6)*(189*(angle_per_pixel/(5/512))**(-2.0/2))**2) * bins * delta_z ** 2 * epsilon_fgr ** 2 )
         else:
             chi = binned_ps/(foreground(360 * k_bin_cents/ (2 * math.pi), foreground_type)*bins*delta_z**2 * epsilon_fgr**2*(std_fg)**2)
             chi2 = binned_ps_check / (foreground(360 * k_bin_cents / (2 * math.pi), foreground_type) * bins * delta_z ** 2 * epsilon_fgr ** 2*(std_fg)**2)

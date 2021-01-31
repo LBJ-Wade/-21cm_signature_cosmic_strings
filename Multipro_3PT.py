@@ -59,10 +59,10 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 50. #in degree
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
-N = 512
+N = patch_size
 z = 30
 
 #redshift string formation
@@ -160,18 +160,18 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
         mean, std, std_eff = 253 * (1420 / (1 + z_wake) * 1 / 120) ** -2.8, 1.3 * (
-                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69*(angle_per_pixel*512/5)**(-3.3/2)
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69*(angle_per_pixel/(5/512))**(-3.3/2)
     if fg_type == 2:
         mean, std, std_eff = 38.6 * (1420 / (1 + z_wake) * 1 / 151) ** -2.07, 2.3 * (
-                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410*(angle_per_pixel*512/5)**(-1.1/2)
+                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410*(angle_per_pixel/(5/512))**(-1.1/2)
     if fg_type == 3:
         mean, std, std_eff = 2.2 * (1420 / (1 + z_wake) * 1 / 120) ** -2.15, 0.05 * (
-                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415*(angle_per_pixel*512/5)**(-3.0/2)
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415*(angle_per_pixel/(5/512))**(-3.0/2)
     if fg_type == 4:
         mean, std, std_eff = 1e-4 * (1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 1e-5 * (
-                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
+                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81*(angle_per_pixel/(5/512))**(-1.0/2)
     if fg_type == 6:
-        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)*(angle_per_pixel*512/5)**(-2.0/2)
+        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)*(angle_per_pixel/(5/512))**(-2.0/2)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -342,10 +342,10 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
-    ft_signal = (ft_sig + grf_norm_fg) * filter_function
-    ft = grf_norm_fg * filter_function
+    ft_signal = (ft_sig + grf_norm_fg) #* filter_function
+    ft = grf_norm_fg #* filter_function
 
-    reduc = 1#e-2
+    reduc = 1e-3
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -371,8 +371,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 10000
-parts = 1000
+n = 10
+parts = 1
 foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
@@ -401,11 +401,11 @@ print('With signal: ')
 print(np.abs(np.mean(threepoint_average_signal)))
 plt.hist(np.array(threepoint_average).real, bins=100)
 plt.vlines(0, 0, 4000, colors='r')
-plt.savefig('test_3PF.png', dpi=400)
+#plt.savefig('test_3PF.png', dpi=400)
 plt.clf()
 plt.hist(np.array(threepoint_average_signal).real, bins=100)
 plt.vlines(0, 0, 4000, colors='r')
-plt.savefig('test_3PF_with_sign.png', dpi=400)
+#plt.savefig('test_3PF_with_sign.png', dpi=400)
 
 
 

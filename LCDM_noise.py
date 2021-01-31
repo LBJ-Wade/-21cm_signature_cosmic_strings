@@ -196,9 +196,9 @@ def deexitation_crosssection(t_k):
 
 
 
-N = 512
+N = 256
 patch_size = N
-c = 20./512
+c = 5./N
 angle_per_pixel =c
 z = 30
 ####################
@@ -280,15 +280,15 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
-        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 66*(angle_per_pixel*512/5)**(-3.3/2)
+        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 66*(angle_per_pixel/(5/512))**(-3.3/2)
     if fg_type == 2:
-        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410*(angle_per_pixel*512/5)**(-1.1/2)
+        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410*(angle_per_pixel/(5/512))**(-1.1/2)
     if fg_type == 3:
-        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*(angle_per_pixel*512/5)**(-3.0/2)
+        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*(angle_per_pixel/(5/512))**(-3.0/2)
     if fg_type == 4:
-        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
+        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*(angle_per_pixel/(5/512))**(-1.0/2)
     if fg_type == 6:
-        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*(angle_per_pixel*512/5)**(-2.0/2)
+        mean, std, std_eff = -2.72477, 0.0000508*(1+30)/(1+z), 189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2.0/2)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -458,7 +458,7 @@ LCDM_ps = np.load('angular_ps_30.npy')
 n = 1
 chii = np.zeros(n)
 for i in range(0, n):
-    grf = np.random.normal(123, 69*(1+30)/(1+z), size=(patch_size, patch_size))
+    grf = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2), size=(patch_size, patch_size))
     fake_field = np.fft.ifft2(foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)).real
     data_ps = np.abs(np.fft.fft2(fake_field))**2/N**2
     k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
@@ -466,16 +466,19 @@ for i in range(0, n):
     digi = np.digitize(mag_k, k_bins) - 1
     binned_ps = []
     for k in range(0, digi.max()):
-        binned_ps.append(np.mean(data_ps[digi == k]))
+        if len(data_ps[digi == k])<1:
+            binned_ps.append(1)
+        else:
+            binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
-    chi = binned_ps/(foreground(360 * k_bin_cents/(2 * math.pi),1)*bins*69**2)
+    chi = binned_ps/(foreground(360 * k_bin_cents/(2 * math.pi),1)*bins*(189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2))**2)
     chii[i] = np.sum(chi)
-#print(np.mean(chii))
+print(np.mean(chii))
 
 mean=[]
 std=[]
 for k in range(0, 50):
-    grf1 = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel*512/5)**(-2./2), size=(patch_size, patch_size))
+    grf1 = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2), size=(patch_size, patch_size))
     fake_field1 = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf1)).real
     mean.append(np.mean(fake_field1))
     std.append(np.std(fake_field1))
@@ -495,8 +498,8 @@ plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
-print(np.mean((GRF_generator(20, [512,512])+T_back2-1e3*2.725*(1+z))/(1+z)))
-print(np.std((GRF_generator(20, [512,512])+T_back2-1e3*2.725*(1+z))/(1+z)))
+print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
+print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 #plt.show()'''
 
 
