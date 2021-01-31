@@ -200,9 +200,9 @@ N = 512
 patch_size = N
 c = 5./512
 angle_per_pixel =c
-z = 20
+z = 30
 ####################
-foreground_type = 5
+foreground_type = 2
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -280,13 +280,13 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
-        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 69
+        mean, std, std_eff = 253*(1420/(1+z_wake)*1/120)**-2.8, 1.3*(1420/(1+z_wake)*1/120)**-2.8, 66*(angle_per_pixel*512/5)**(-3.3/2)
     if fg_type == 2:
-        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410
+        mean, std, std_eff = 38.6*(1420/(1+z_wake)*1/151)**-2.07, 2.3*(1420/(1+z_wake)*1/151)**-2.07, 1410*(angle_per_pixel*512/5)**(-1.1/2)
     if fg_type == 3:
-        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415
+        mean, std, std_eff = 2.2*(1420/(1+z_wake)*1/120)**-2.15, 0.05*(1420/(1+z_wake)*1/120)**-2.15, 415*(angle_per_pixel*512/5)**(-3.0/2)
     if fg_type == 4:
-        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81
+        mean, std, std_eff = 1e-4*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 1e-5*(1420/(1+z_wake)*1/(2*1e3))**-2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
     sum = 0
     for i in range(0, len(grf_fg)):
         for j in range(0, len(grf_fg)):
@@ -322,17 +322,17 @@ def foreground(l, fg_type):
            if l[i] < 1:
                dummy[i] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
            else:
-               dummy[i] = A * (1100. / (l[i] + 1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha * (1 + z_wake) ** (
+               dummy[i] = A * (1100. / (l[i])) ** beta * (130 ** 2 / 1420 ** 2) ** alpha * (1 + z_wake) ** (
                            2 * alpha)  # (1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
        return dummy
     else:
-        dummy = np.zeros((N, N))
+        dummy = np.zeros((len(l), len(l[1])))
         for i in range(0,len(l)):
-            for j in range(0,len(l)):
+            for j in range(0,len(l[1])):
                 if l[i][j]<1:
                     dummy[i][j] = A * (1100. / (30)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (1 + z_wake) ** (2 * alpha)
                 else:
-                    dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z_wake)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+                    dummy[i][j] = A * (1100. / (l[i][j])) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z_wake)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
         return dummy
 
 
@@ -392,7 +392,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = LCDM(l)
+    Pl = foreground(l, 1)
 
     real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -451,12 +451,13 @@ bins=300
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
+#print(180*mag_k[0]/np.pi)
 LCDM_ps = np.load('angular_ps_25.npy')
-n = 10
+n = 1
 chii = np.zeros(n)
 for i in range(0, n):
-    grf = np.random.normal(-1.1612e6, 189*(1+30)/(1+z), size=(patch_size, patch_size))
-    fake_field = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real
+    grf = np.random.normal(123, 69*(1+30)/(1+z), size=(patch_size, patch_size))
+    fake_field = np.fft.ifft2(foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)).real
     data_ps = np.abs(np.fft.fft2(fake_field))**2/N**2
     k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
@@ -465,21 +466,26 @@ for i in range(0, n):
     for k in range(0, digi.max()):
         binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
-    chi = binned_ps/(LCDM(360 * k_bin_cents/(2 * math.pi))*bins*189**2)
+    chi = binned_ps/(foreground(360 * k_bin_cents/(2 * math.pi),1)*bins*69**2)
     chii[i] = np.sum(chi)
-print(np.mean(chii))
+#print(np.mean(chii))
 
-grf = np.random.normal(-1.1612e6, 189*(1+30)/(1+z), size=(patch_size, patch_size))
-fake_field = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)).real
-plt.imshow(fake_field)
-plt.colorbar()
-#plt.show()
-print(np.mean(fake_field))
-print(np.std(fake_field))
+mean=[]
+std=[]
+for k in range(0, 100):
+    grf1 = np.random.normal(112412.7, 415*(c*512/5)**(-3.0/2), size=(patch_size, patch_size))
+    fake_field1 = np.fft.ifft2(foreground(180*mag_k/np.pi, 3)**0.5*np.fft.fft2(grf1)*1e-3).real
+    mean.append(np.mean(fake_field1))
+    std.append(np.std(fake_field1))
+print(np.mean(mean))
+print(np.mean(std))
 
+grf = np.random.normal(0, 1, size=(patch_size, patch_size))
+fake_field = foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)
+print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 3)[0]).real))
+print(np.std(np.fft.ifft2(fg_normalize(fake_field, 3)[0]).real))
 
-
-plt.imshow((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake))
+'''plt.imshow((GRF_generator(5, [512,512])))
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -487,9 +493,9 @@ plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
-print(np.mean((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
-print(np.std((GRF_generator(5, [512,512])+T_back2-2.725*(1+z_wake)*1e3)/(1+z_wake)))
-#plt.show()
+print(np.mean(GRF_generator(5, [512,512])))
+print(np.std(GRF_generator(5, [512,512])))
+#plt.show()'''
 
 
 

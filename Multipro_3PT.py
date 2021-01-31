@@ -160,16 +160,16 @@ print('The wakes thickness in redshift space is given by dz_wake = '+str(wake_th
 def fg_normalize(grf_fg, fg_type):#TODO: Integrate over redshift bin
     if fg_type == 1:
         mean, std, std_eff = 253 * (1420 / (1 + z_wake) * 1 / 120) ** -2.8, 1.3 * (
-                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 66*(angle_per_pixel*512/5)**(-3.3/2)
     if fg_type == 2:
         mean, std, std_eff = 38.6 * (1420 / (1 + z_wake) * 1 / 151) ** -2.07, 2.3 * (
-                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410
+                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410*(angle_per_pixel*512/5)**(-1.1/2)
     if fg_type == 3:
         mean, std, std_eff = 2.2 * (1420 / (1 + z_wake) * 1 / 120) ** -2.15, 0.05 * (
-                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415*(angle_per_pixel*512/5)**(-3.0/2)
     if fg_type == 4:
         mean, std, std_eff = 1e-4 * (1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 1e-5 * (
-                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81
+                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81*(angle_per_pixel*512/5)**(-1.0/2)
     if fg_type == 6:
         mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)
     sum = 0
@@ -226,7 +226,7 @@ def foreground(l, fg_type):
                 dummy[i][j] = A * (1100. / (1)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (
                             1 + z) ** (2 *alpha)
             else:
-                dummy[i][j] = A * (1100. / (l[i][j]+1)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+                dummy[i][j] = A * (1100. / (l[i][j])) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
     return dummy
 
 
