@@ -59,7 +59,7 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 5. #in degree
+patch_angle = 6. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
@@ -319,13 +319,13 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if foreg_type ==1:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 2:
-        filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum)*1e1)
+        filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type ==5:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) +foreground(l, 6)))
     if foreg_type==3:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) * 3e3)
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) )
     if foreg_type==4:
-        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum)*1e2)
+        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 6:
         filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type==5:
@@ -342,10 +342,10 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
-    ft_signal = (ft_sig + grf_norm_fg) #* filter_function
-    ft = grf_norm_fg #* filter_function
+    ft_signal = (ft_sig + grf_norm_fg) * filter_function
+    ft = grf_norm_fg * filter_function
 
-    reduc = 1e-3
+    reduc = 1#e-2
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -371,8 +371,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 10
-parts = 1
+n = 50000
+parts = 1000
 foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))

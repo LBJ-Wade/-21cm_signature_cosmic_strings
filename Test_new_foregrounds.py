@@ -53,13 +53,13 @@ def deexitation_crosssection(t_k):
 
 
 
-N = 256
+N = 512
 patch_size = N
 c = 5./N
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 5
+foreground_type = 2
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -280,7 +280,7 @@ for k in range(0, n):
     bins = 300
 
 
-    epsilon_fgr = 1e-3
+    epsilon_fgr = 10**(-2.5)
 
 
     if foreground_type==5:

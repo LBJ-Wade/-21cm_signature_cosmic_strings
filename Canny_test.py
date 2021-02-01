@@ -245,7 +245,7 @@ def non_max_suppression(img, D):
 
 
 ######################
-epsilon_fgr = 0.3e-2#with kernel #0.15*1e-2 without kernel
+epsilon_fgr = 0.2e-2#with kernel #0.15*1e-2 without kernel
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
