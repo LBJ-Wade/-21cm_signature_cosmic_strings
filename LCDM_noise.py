@@ -196,7 +196,7 @@ def deexitation_crosssection(t_k):
 
 
 
-N = 256
+N = 512
 patch_size = N
 c = 5./N
 angle_per_pixel =c
@@ -490,7 +490,7 @@ fake_field = LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)
 print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
 print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
 
-plt.imshow((GRF_generator(5, [512,512])))
+plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z))
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -500,7 +500,7 @@ cbar = plt.colorbar()
 cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
-#plt.show()'''
+plt.show()
 
 
 

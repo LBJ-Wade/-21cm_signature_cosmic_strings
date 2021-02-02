@@ -11,6 +11,7 @@ from functools import partial
 from itertools import combinations
 import numpy as np
 from scipy.interpolate import UnivariateSpline as spline
+from scipy.interpolate import pchip
 from scipy.integrate import simps
 import scipy.constants
 import matplotlib.pyplot as plt
@@ -290,8 +291,12 @@ class HIRAXArrayConfig(object):
         hist = np.array(hist)/2. # Because we double counted
 
         density = hist/(2*np.pi*us*du)
-
-        return spline(us, density, ext=1, k=4, s=1000)
+        spl = spline(us,density, s=100)
+        plt.plot(us, density)
+        plt.plot(us, spl(us))
+        plt.show()
+        return spline(us, density, ext=1, k=3, s=1000)
+        #return pchip(us, density)
 
     def nu(self, fid_freq=600*units.MHz, normalize=True):
         """
@@ -405,7 +410,7 @@ array_conf = HIRAXArrayConfig(d_ns=dist_ns, d_ew=dist_ew, Ddish=2*np.sqrt(A_e/np
 u, nu = array_conf.nu(fid_freq=1420./(1+z))
 
 plt.plot(u, nu)
-plt.show()
+#plt.show()
 plt.plot(u, np.sqrt(Pinst(nu)))
 plt.yscale('log')
 #plt.show()
