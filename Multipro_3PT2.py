@@ -59,7 +59,7 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 10. #in degree
+patch_angle = 6. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
@@ -291,7 +291,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*31)
+    np.random.seed(j*13)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))

@@ -59,7 +59,7 @@ c = 5./N
 angle_per_pixel =c
 z = 30
 ####################
-foreground_type = 2
+foreground_type = 6
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 1000
@@ -232,15 +232,16 @@ def LCDM(l):
 
 
 
-n = 200
+n = 100
 chi_square = []
 chi_square_nosig = []
-filter = True
+filter = False
 LCDM_ps = np.load('angular_ps_30.npy')
-for k in range(0, n):
-    kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
+kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
-    mag_k = np.sqrt(kx ** 2 + ky ** 2)
+mag_k = np.sqrt(kx ** 2 + ky ** 2)
+l = 360 * mag_k/ (2 * math.pi)
+for k in range(0, n):
     grf = np.random.normal(0., 1., size = (patch_size, patch_size))
     if foreground_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -248,7 +249,6 @@ for k in range(0, n):
         grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_LCDM = np.random.normal(0., 1., size=(patch_size, patch_size))
     grf2 = np.random.normal(0., 1., size = (patch_size, patch_size))
-    l = 360 * mag_k/ (2 * math.pi)
     if foreground_type == 5:
         fg = foreground(l, 1)
         fg_II = foreground(l, 2)

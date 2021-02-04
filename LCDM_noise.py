@@ -106,13 +106,24 @@ def def_ang_ps(k, init_angular):
 kx, ky = np.meshgrid( 2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel),
                          2 * math.pi * np.fft.fftfreq(patch_size, angle_per_pixel))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
+for i in range(10000, 10100):
+    print(1 / (math.pi * cosmo.background.dist_rad_a(1 / (1 + z)) * cosmo.background.dist_rad_a(1 / (1 + z + delta_z))) *integrate.quad(lambda k: np.cos((cosmo.background.dist_rad_a(1 / (1 + z)) - cosmo.background.dist_rad_a(1 / (1 + z + delta_z))) * k) * ps(k, i),0, 20)[0])
+    print(
+        1 / (math.pi * cosmo.background.dist_rad_a(1 / (1 + z)) * cosmo.background.dist_rad_a(1 / (1 + z + delta_z))) *
+        integrate.quad(lambda k: 1 * ps(k,
+                                                                                                                      i),
+                       0, 20)[0])
+'''
+
+'''
 init_angular = angular_ps(180*mag_k.max()/math.pi+1)
 np.save('angular_ps_30', init_angular)
 ps_LCDM = def_ang_ps(mag_k, init_angular)
 noise_real = np.random.normal(0, 1, size = (patch_size, patch_size))
 noise = np.fft.fft2(noise_real)
 grf = np.fft.ifft2(noise * ps_LCDM**0.5).real
-np.save('grf_LCDAM', grf)'''
+np.save('grf_LCDAM', grf)
+'''
 
 
 
@@ -318,6 +329,8 @@ def foreground(l, fg_type):
         A, beta, alpha = 0.088, 3.0, 2.15
     if fg_type == 4:                    #https://arxiv.org/pdf/astro-ph/0408515.pdf and https://iopscience.iop.org/article/10.1086/421241/pdf --> uncertainty at least two orders of magnitude
         A, beta, alpha = 0.014, 1.0, 2.10
+    if fg_type == 6:
+        return LCDM(l)
     if l[1].ndim == 0:
        dummy = np.zeros(len(l))
        for i in range(0, len(dummy)):
@@ -448,19 +461,19 @@ def GRF_spec(kappa, l_edges, ang):
 
 
 #############################
-
 bins=300
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 #print(180*mag_k[0]/np.pi)
 LCDM_ps = np.load('angular_ps_30.npy')
-n = 1
+n = 10
 chii = np.zeros(n)
 for i in range(0, n):
-    grf = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2), size=(patch_size, patch_size))
-    fake_field = np.fft.ifft2(foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)).real
-    data_ps = np.abs(np.fft.fft2(fake_field))**2/N**2
+    grf = np.random.normal(0, 1, size=(patch_size, patch_size))
+    fake_field = foreground(180*mag_k/np.pi, 6)**0.5*np.fft.fft2(grf)*1e-3
+    fake_field1 = fg_normalize(fake_field, 6)[0]*1e3
+    data_ps = np.abs(fake_field1)**2/N**2
     k_bins = np.linspace(0.1, 0.95*mag_k.max(), bins)
     k_bin_cents = k_bins[:-1] + (k_bins[1:] - k_bins[:-1])/2
     digi = np.digitize(mag_k, k_bins) - 1
@@ -471,7 +484,7 @@ for i in range(0, n):
         else:
             binned_ps.append(np.mean(data_ps[digi == k]))
     binned_ps = np.array(binned_ps).real
-    chi = binned_ps/(foreground(360 * k_bin_cents/(2 * math.pi),1)*bins*(189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2))**2)
+    chi = binned_ps/(foreground(180 * k_bin_cents/np.pi, 6)*bins*(189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2))**2)
     chii[i] = np.sum(chi)
 print(np.mean(chii))
 
@@ -490,19 +503,17 @@ fake_field = LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)
 print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
 print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
 
-plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z))
+plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
 plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
-cbar.set_label('$ T_b \,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
+cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=30)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 plt.show()
-
-
 
 
 

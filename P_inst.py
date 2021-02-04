@@ -291,7 +291,7 @@ class HIRAXArrayConfig(object):
         hist = np.array(hist)/2. # Because we double counted
 
         density = hist/(2*np.pi*us*du)
-        spl = spline(us,density, s=100)
+        spl = spline(us,density, s=10)
         plt.plot(us, density)
         plt.plot(us, spl(us))
         plt.show()
@@ -415,7 +415,7 @@ plt.plot(u, np.sqrt(Pinst(nu)))
 plt.yscale('log')
 #plt.show()
 
-plt.plot(dist_ew, dist_ns, 'rx')
+'''plt.plot(dist_ew, dist_ns, 'rx')
 plt.xlabel('meters')
 plt.ylabel('meters')
-#plt.show()
+plt.show()'''
