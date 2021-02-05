@@ -291,12 +291,17 @@ class HIRAXArrayConfig(object):
         hist = np.array(hist)/2. # Because we double counted
 
         density = hist/(2*np.pi*us*du)
-        spl = spline(us,density, s=10)
+        s_spline = 20
+        k_spline = 2
+
+        '''spl = spline(us, density, k=k_spline, s=s_spline)
         plt.plot(us, density)
         plt.plot(us, spl(us))
-        plt.show()
-        return spline(us, density, ext=1, k=3, s=1000)
-        #return pchip(us, density)
+        #plt.ylim(-0.1,0.1)
+        plt.show()'''
+
+
+        return spline(us, density, ext=1, k=k_spline, s=s_spline)
 
     def nu(self, fid_freq=600*units.MHz, normalize=True):
         """
@@ -329,6 +334,9 @@ class HIRAXArrayConfig(object):
             norm = nbl/simps(spl(us)*2*np.pi*us, us)
         else:
             norm = 1
+
+        '''Non-negativity condition'''
+        n_u[n_u<0.001]=0.001
 
         return us, norm*n_u
 
@@ -376,14 +384,14 @@ def GRF_generator(ang, shape, seed=None):
 #https://arxiv.org/pdf/1206.6945.pdf
 z = 30 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
-T_inst = 100*1e3#T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
+T_inst = 100*1e3 #T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
 T_sys = T_sky + T_inst #temperature
 N_d = 256 #numper of tiles, 1 tile are 16 antennas, effective area per tile see below, for MWA II: https://core.ac.uk/download/pdf/195695824.pdf
 N_p = 10 #number of pointings: N_p Omega_p = 4 Pi f_sky
 A_e = 21.5 #effective total dish area, source: The EoR sensitivity of the Murchison Widefield Array
 #D_min =14 #smallest baseling in m
 #D_max = 5300 #longest baseline in m for MWA II: "The Phase II Murchison Widefield Array: Design overview"
-t_tot = 1000*3600 #total integration time: 1000h
+t_tot = 1000*3600 #total integration time: 100h
 d_nu = 0.01*1e6 #bandwidth in Hz in that channel: 10kHz
 #FOV:
 #D_max: 5300
@@ -410,10 +418,12 @@ array_conf = HIRAXArrayConfig(d_ns=dist_ns, d_ew=dist_ew, Ddish=2*np.sqrt(A_e/np
 u, nu = array_conf.nu(fid_freq=1420./(1+z))
 
 plt.plot(u, nu)
-#plt.show()
+plt.hlines(0,u.min(),u.max(),colors='r')
+plt.ylim(-1,1)
+plt.show()
 plt.plot(u, np.sqrt(Pinst(nu)))
 plt.yscale('log')
-#plt.show()
+plt.show()
 
 '''plt.plot(dist_ew, dist_ns, 'rx')
 plt.xlabel('meters')

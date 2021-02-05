@@ -59,7 +59,7 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 6. #in degree
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
@@ -226,7 +226,10 @@ def foreground(l, fg_type):
                 dummy[i][j] = A * (1100. / (1)) ** beta * (130. ** 2 / 1420. ** 2) ** alpha * (
                             1 + z) ** (2 *alpha)
             else:
-                dummy[i][j] = A * (1100. / (l[i][j])) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)#(1. / (a + 1.) * ((1. + 30) ** (a + 1.) - (1. + 30 -0.008) ** (a + 1.))) ** 2
+                l_bottom = np.floor(l[i,j])
+                l_top = l_bottom+1
+                delta_l = l[i,j]-l_bottom
+                dummy[i][j] = A * (1100. / (l_bottom)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha) + delta_l*(A * (1100. / (l_top)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha)-A * (1100. / (l_bottom)) ** beta * (130 ** 2 / 1420 ** 2) ** alpha* (1+z)**(2*alpha))
     return dummy
 
 
@@ -291,7 +294,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*13)
+    np.random.seed(j*24)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -305,6 +308,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     mag_k = np.sqrt(kx ** 2 + ky ** 2)
     l = 360 * mag_k / (2 * math.pi)
     ft_sig = np.fft.fftshift(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False))
+    #print(l[0])
     if fg_type == 1:
         pspectrum = foreground(l, 1)
     if fg_type == 2:
@@ -371,8 +375,8 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 50000
-parts = 1000
+n = 10
+parts = 1
 foreg_type = 5
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
