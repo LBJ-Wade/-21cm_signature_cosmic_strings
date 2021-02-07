@@ -59,11 +59,11 @@ def deexitation_crosssection(t_k):
 
 
 patch_size = 512
-patch_angle = 7. #in degree
+patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
-z = 30
+z = 20
 
 #redshift string formation
 z_i = 1000
@@ -81,6 +81,8 @@ vsgammas_square = 1./3
 T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
+#temperature of the cosmic gas for z<150
+T_g = 0.02*(1+z)**2
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
@@ -94,9 +96,20 @@ T_back = (0.19055) * (0.049*0.67*(1.+z_wake)**2 * xHI)/np.sqrt(0.267*(1.+z_wake)
 T_back2 = 0.1* 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z_wake)**0.5/2.5**0.5
 theta1 =  math.pi*0.32 #angle 1 in z-space
 theta2 = 0 #angle 2 in z-space
-T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)*(2*np.sin(theta1)**2)**-1
+
+"""Including Diffusion effects."""
+if T_K > 3 * T_g:
+    # T_b.append(1e3* 0.07  *xc[j]/(xc[j]+1.)*(1-T_gamma/T_K[j])*np.sqrt(1.+z_wake)*(2*np.sin(theta1)**2)**-1)
+    T_b = (17 * xc / (xc + 1) * (1 - T_gamma / T_K) * 4 * np.sqrt(1. + z_wake) * ( 2 * np.sin(theta1) ** 2) ** -1)
+else:
+    if T_K < T_g:
+        T_b = (17 * xc / (xc + 1) * (1 - T_gamma / (3 * T_g)) * (1 + T_K / T_g) * np.sqrt(1. + z_wake) * (2 * np.sin(theta1) ** 2) ** -1 * T_g / T_K)
+    else:
+        T_b = (17 * xc / (xc + 1) * (1 - T_gamma / (3 * T_g)) * (1 + T_K / T_g) * np.sqrt(1. + z_wake) * (2 * np.sin(theta1) ** 2) ** -1)
+
 wake_brightness = T_b* 1e3 #in mK
 wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2*1/np.cos(theta1)
+wake_thickness = -delta_z
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 wake_size_angle = [1., 1.] #in degree
 shift_wake_angle = [0, 0]
@@ -294,7 +307,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*3)
+    np.random.seed(j*24)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -375,7 +388,7 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 50000
+n = 70000
 parts = 1000
 foreg_type = 5
 
