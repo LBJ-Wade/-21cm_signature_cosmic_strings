@@ -307,7 +307,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*24)
+    np.random.seed(j*31)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -388,7 +388,7 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 70000
+n = 50000
 parts = 1000
 foreg_type = 5
 
@@ -396,7 +396,7 @@ threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
-LCDM_ps = np.load('angular_ps_30.npy')
+LCDM_ps = np.load('angular_ps_20.npy')
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):
