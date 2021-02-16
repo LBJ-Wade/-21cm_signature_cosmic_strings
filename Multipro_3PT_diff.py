@@ -58,7 +58,7 @@ def deexitation_crosssection(t_k):
 
 
 
-patch_size = 512
+patch_size = 256
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
@@ -391,9 +391,9 @@ def combine_complex(a, b):
 n = 10000
 parts = 100
 foreg_type = 5
-eps_fg = 1
+eps_fg = 1#0.5
 print('N = '+str(n))
-print('angle = '+ str(patch_angle))
+print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
