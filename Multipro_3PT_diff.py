@@ -63,12 +63,12 @@ patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
-z = 20
+z = 13
 
 #redshift string formation
-z_i = 1000
+z_i = 3000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.02
+delta_f = 0.05
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
 #redshift of center of wake
@@ -109,7 +109,7 @@ else:
 
 wake_brightness = T_b* 1e3 #in mK
 wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2*1/np.cos(theta1)
-wake_thickness = -delta_z
+#wake_thickness = -delta_z
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 wake_size_angle = [1., 1.] #in degree
 shift_wake_angle = [0, 0]
@@ -307,7 +307,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*31)
+    np.random.seed(j*13)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type==5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -332,7 +332,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         pspectrum = foreground(l, 4)
     if fg_type == 6:
         pspectrum = foreground(l, 6)
-    epsilon_fgr = 1#e-1
+    epsilon_fgr = eps_fg
     if foreg_type ==1:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 2:
@@ -388,15 +388,19 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 50000
-parts = 1000
+n = 10000
+parts = 100
 foreg_type = 5
+eps_fg = 1
+print('N = '+str(n))
+print('angle = '+ str(patch_angle))
+print('foreground removal '+ str(eps_fg))
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
-LCDM_ps = np.load('angular_ps_20.npy')
+LCDM_ps = np.load('angular_ps_13.npy')
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):
@@ -413,9 +417,11 @@ for k in range(0, parts):
 threepoint_average = np.array(combine_complex(np.array(threepoint_average_r), np.array(threepoint_average_i)))
 threepoint_average_signal = np.array(combine_complex(np.array(threepoint_average_signal_r), np.array(threepoint_average_signal_i)))
 print('Without signal: ')
-print(np.abs(np.mean(threepoint_average)))
+print('\mu = '+ str(np.abs(np.mean(threepoint_average))))
+print('\sigma = '+ str(np.abs(np.std(threepoint_average))))
 print('With signal: ')
-print(np.abs(np.mean(threepoint_average_signal)))
+print('\mu =' + str(np.abs(np.mean(threepoint_average_signal))))
+print('\sigma =' + str(np.abs(np.std(threepoint_average_signal))))
 plt.hist(np.array(threepoint_average).real, bins=100)
 plt.vlines(0, 0, 4000, colors='r')
 #plt.savefig('test_3PF.png', dpi=400)

@@ -382,7 +382,7 @@ def GRF_generator(ang, shape, seed=None):
 
 
 #https://arxiv.org/pdf/1206.6945.pdf
-z = 30 #redshift
+z = 13 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
 T_inst = 100*1e3 #T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
 T_sys = T_sky + T_inst #temperature
