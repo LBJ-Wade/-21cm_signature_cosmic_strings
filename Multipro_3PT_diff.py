@@ -58,7 +58,7 @@ def deexitation_crosssection(t_k):
 
 
 
-patch_size = 256
+patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
@@ -77,7 +77,7 @@ z_wake = z+delta_z/2
 gmu_6 = 0.3
 #string speed
 vsgammas_square = 1./3
-#temperature of HI atoms inside the wake [K]
+#temperature of HI atoms inside the wake [Kl
 T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
@@ -86,7 +86,10 @@ T_g = 0.02*(1+z)**2
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+#xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+deex_fit = (1e-13*(27598 - 8.5 + (-13797.5 - 13799.5)/(1 + (T_K/24.0322)**2.28305)**0.0136134))
+xc = 4*nback*deex_fit* 0.068/(2.85e-15 *T_gamma)
+print('We make use of an fit function for the deexcitation cross section')
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
@@ -388,10 +391,10 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 10000
-parts = 100
+n = 50000
+parts = 500
 foreg_type = 5
-eps_fg = 1#0.5
+eps_fg = 1
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
@@ -400,7 +403,7 @@ threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
-LCDM_ps = np.load('angular_ps_13.npy')
+LCDM_ps = np.load('angular_ps_12.npy')
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):
