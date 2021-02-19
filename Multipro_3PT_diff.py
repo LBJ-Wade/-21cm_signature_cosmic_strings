@@ -63,7 +63,7 @@ patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
 N = patch_size
-z = 13
+z = 12
 
 #redshift string formation
 z_i = 3000
@@ -391,13 +391,14 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 50000
-parts = 500
+n = 25000
+parts = 250
 foreg_type = 5
-eps_fg = 1
+eps_fg = 0.1
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
+print('gradient included: no')
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
