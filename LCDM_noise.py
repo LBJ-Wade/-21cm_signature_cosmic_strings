@@ -211,7 +211,7 @@ N = 512
 patch_size = N
 c = 5./N
 angle_per_pixel =c
-z = 30
+z = 12
 ####################
 foreground_type = 2
 ####################
@@ -389,6 +389,35 @@ def LCDM(l):
                     dummy[i][j] = LCDM_ps[l_bottom] + delta_l * (LCDM_ps[l_top] - LCDM_ps[l_bottom])
         return dummy
 
+def Pinst(l):
+    dummy = np.zeros((len(l), len(l[1])))
+    u = l/(2*np.pi)
+    for i in range(0, len(u)):
+        for k in range(0, len(u[1])):
+            index = 0
+            for j in range(0, len(Inter_ps_u)):
+                if u[i, k] > Inter_ps_u.max():
+                    index = np.pi
+                    break
+                if u[i, k] < Inter_ps_u[j]:
+                    index = j
+                    break
+                else:
+                    continue
+            if index == np.pi:
+                #dummy[i,k] = -1000
+                continue
+            if index-1 < 0:
+                u_down = 0
+            else:
+                u_down = Inter_ps_u[index-1]
+            u_up = Inter_ps_u[index]
+            if index - 1 < 0:
+                dummy[i, k] = Inter_ps[index]-(Inter_ps[index+1]-Inter_ps[index])/(Inter_ps_u[index+1]-Inter_ps_u[index])*(u_up-u[i, k])
+            else:
+                dummy[i, k] = Inter_ps[index-1]+(Inter_ps[index]-Inter_ps[index-1])/(Inter_ps_u[index]-Inter_ps_u[index-1])*(u[i, k]-u_down)
+    return dummy
+
 
 def GRF_generator(ang, shape, seed=None):
     """
@@ -407,7 +436,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = LCDM(l)
+    Pl = Pinst(l)
 
     real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -417,7 +446,7 @@ def GRF_generator(ang, shape, seed=None):
 
     ft_map[0, 0] = 0.0
 
-    return np.fft.irfft2(ft_map).real
+    return ft_map#np.fft.irfft2(ft_map).real
 
 
 def GRF_spec(kappa, l_edges, ang):
@@ -467,6 +496,9 @@ kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 #print(180*mag_k[0]/np.pi)
 LCDM_ps = np.load('angular_ps_30.npy')
+Inter_ps = np.load('pinst_12_MWA_II.npy')
+Inter_ps_u = np.load('u_cut.npy')
+'''
 n = 10
 chii = np.zeros(n)
 for i in range(0, n):
@@ -486,24 +518,44 @@ for i in range(0, n):
     binned_ps = np.array(binned_ps).real
     chi = binned_ps/(foreground(180 * k_bin_cents/np.pi, 6)*bins*(189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2))**2)
     chii[i] = np.sum(chi)
-print(np.mean(chii))
+print(np.mean(chii))'''
 
+
+'''
 mean=[]
 std=[]
-for k in range(0, 50):
-    grf1 = np.random.normal(0, 189*(1+30)/(1+z)*(angle_per_pixel/(5/512))**(-2./2), size=(patch_size, patch_size))
-    fake_field1 = np.fft.ifft2(LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf1)).real
+for k in range(0, 10):
+    grf1 = np.random.normal(0, 9500, size=(patch_size, patch_size))
+    fake_field1 = Pinst(180*mag_k/np.pi)**0.5*np.fft.fft2(grf1)
     mean.append(np.mean(fake_field1))
     std.append(np.std(fake_field1))
-print(np.mean(mean))
-print(np.mean(std))
+print(np.abs(np.mean(mean)))
+print(np.mean(std))'''
 
-grf = np.random.normal(0, 1, size=(patch_size, patch_size))
+'''grf = np.random.normal(0, 1, size=(patch_size, patch_size))
 fake_field = LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)
 print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
-print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
+print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))'''
 
-plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
+
+grf = GRF_generator(5, [N, N])
+grf_inst = np.zeros((N, N)) + 1J*np.zeros((N, N))
+for i in range(0, len(grf[1])):
+    for j in range(0, len(grf)):
+        grf_inst[j, i] = grf[j, i]
+
+for i in range(0, len(grf[1])):
+    for j in range(0, len(grf)):
+        grf_inst[len(grf)-j-1, N-i-1] = grf[j, i]
+
+
+plt.imshow(np.fft.fftshift(grf_inst.real))
+plt.colorbar()
+plt.show()
+print(np.abs(np.mean(grf)))
+print(np.std(grf))
+
+'''plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
@@ -513,7 +565,7 @@ cbar = plt.colorbar()
 cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=30)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
-plt.show()
+plt.show()'''
 
 
 
@@ -525,16 +577,12 @@ plt.show()
 
 '''x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110,14])
 y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 1.5238e+17])
-
+'''
 fig, axs = plt.subplots(2, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
-z=np.linspace(0.0001,15, 1000)
-a=np.linspace(0.2, 15, 100)
-axs[1].plot(x, y*10**-5, label='$P_{inst}$')
-axs[1].plot(a, foreground(180*a/np.pi, 1)*1e1 , label='$P_{fg1}\cdot 10^1$')
-axs[1].plot(a, foreground(180*a/np.pi, 2)*1e7 , label='$P_{fg2}\cdot 10^7$')
-axs[1].plot(a, foreground(180*a/np.pi, 3)*0.5e6 , label='$P_{fg3}\cdot 0.5\cdot 10^6$')
-axs[1].plot(a, foreground(180*a/np.pi, 4)*1e11 , label='$P_{fg4}\cdot 10^{11}$')
+axs[1].plot(Inter_ps_u, Inter_ps, label='$P_{inst}$')
+axs[1].plot(Inter_ps_u, foreground(Inter_ps_u*2*np.pi, 1), label='$P_{fg1}\cdot 10^1$')
+axs[1].plot(Inter_ps_u, foreground(180*Inter_ps_u/np.pi, 2), label='$P_{fg2}\cdot 10^7$')
 
 axs[1].vlines(0.216518, 2.5775220e+8, 1e13)
 #axs[1].vlines(27.2505,1.0787888e+13, 3e13)
@@ -546,4 +594,4 @@ axs[1].axvspan( 0.216518, 12.1110, color='lightgrey')
 axs[0].axvspan( 0.216518, 12.1110, color='lightgrey')
 axs[0].legend(loc='upper right')
 axs[1].legend(loc='upper right')
-plt.show()'''
+plt.show()

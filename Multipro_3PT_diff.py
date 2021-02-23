@@ -58,7 +58,7 @@ def deexitation_crosssection(t_k):
 
 
 
-patch_size = 512
+patch_size = 256
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
@@ -365,7 +365,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
 
-    reduc = 1#e-2
+    reduc = 1#e-1
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -391,20 +391,24 @@ def combine_complex(a, b):
     return dummy
 
 
-n = 25000
-parts = 250
+n = 10000
+parts = 100
 foreg_type = 5
-eps_fg = 0.1
+eps_fg = 0.08
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
 print('gradient included: no')
+print('G\mu = ' + str(gmu_6))
+#print('NO FILTER!')
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
 LCDM_ps = np.load('angular_ps_12.npy')
+Inter_ps = np.load('pinst_12_MWA_II.npy')
+Inter_ps_u = np.load('u_cut.npy')
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):

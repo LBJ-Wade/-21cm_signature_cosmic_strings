@@ -291,8 +291,14 @@ class HIRAXArrayConfig(object):
         hist = np.array(hist)/2. # Because we double counted
 
         density = hist/(2*np.pi*us*du)
-        s_spline = 20
-        k_spline = 2
+        plt.plot(us, density)
+
+        s_spline = 50
+        k_spline = 3
+        spl = spline(us, density, ext=1, k=k_spline, s=s_spline)
+        plt.plot(us, spl(us))
+        #plt.ylim(0, 0.1)
+        plt.show()
 
         '''spl = spline(us, density, k=k_spline, s=s_spline)
         plt.plot(us, density)
@@ -328,15 +334,16 @@ class HIRAXArrayConfig(object):
         us = np.arange(u_min, u_max, du) + du
         spl = self.baseline_density_spline(frequency=fid_freq)
         n_u = spl(us)
+        '''Non-negativity condition'''
+        for i in range(1500, len(n_u)):
+            n_u[i] = n_u[1500]
+
         if normalize:
             N = len(self.d_ew)
             nbl = N*(N-1)/2
             norm = nbl/simps(spl(us)*2*np.pi*us, us)
         else:
             norm = 1
-
-        '''Non-negativity condition'''
-        n_u[n_u<0.001]=0.001
 
         return us, norm*n_u
 
@@ -382,20 +389,15 @@ def GRF_generator(ang, shape, seed=None):
 
 
 #https://arxiv.org/pdf/1206.6945.pdf
-z = 13 #redshift
+z = 12 #redshift
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
 T_inst = 100*1e3 #T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
 T_sys = T_sky + T_inst #temperature
 N_d = 256 #numper of tiles, 1 tile are 16 antennas, effective area per tile see below, for MWA II: https://core.ac.uk/download/pdf/195695824.pdf
-N_p = 10 #number of pointings: N_p Omega_p = 4 Pi f_sky
+N_p = 100 #number of pointings: N_p Omega_p = 4 Pi f_sky
 A_e = 21.5 #effective total dish area, source: The EoR sensitivity of the Murchison Widefield Array
-#D_min =14 #smallest baseling in m
-#D_max = 5300 #longest baseline in m for MWA II: "The Phase II Murchison Widefield Array: Design overview"
 t_tot = 1000*3600 #total integration time: 100h
-d_nu = 0.01*1e6 #bandwidth in Hz in that channel: 10kHz
-#FOV:
-#D_max: 5300
-
+d_nu = 0.05*1e6 #bandwidth in Hz in that channel: 50kHz
 
 #read in MWA config, Phase I + II
 antennafile = open('256T_update.txt', 'r')
@@ -407,21 +409,51 @@ for line in antennafile.readlines():
     dist_ew.append(float(fields[3]))
 antennafile.close()
 
-
-
-
-
 # Make an array lyout of a 32x32 element array.
 array_conf = HIRAXArrayConfig(d_ns=dist_ns, d_ew=dist_ew, Ddish=2*np.sqrt(A_e/np.pi))
 
-
 u, nu = array_conf.nu(fid_freq=1420./(1+z))
 
-plt.plot(u, nu)
-plt.hlines(0,u.min(),u.max(),colors='r')
+'''
+introducing a cut off for the spline
+'''
+marker =0
+nu_cut = []
+u_cut = []
+for i in range(0,len(nu)):
+    if marker ==0:
+        if nu[i]>0:
+            nu_cut.append(nu[i])
+            u_cut.append(u[i])
+            continue
+        else:
+            marker=1
+    else:
+        continue
+
+'''
+final result
+'''
+
+u_cut = np.array(u_cut)
+nu_cut = np.array(nu_cut)
+print(u_cut)
+
+'''
+save the result
+'''
+np.save('nu_cut', nu_cut)
+np.save('u_cut', u_cut)
+
+ps = Pinst(nu_cut)
+np.save('pinst_12_MWA_II', ps)
+
+
+plt.plot(u_cut, nu_cut)
+plt.hlines(0, u_cut.min(), u_cut.max(), colors='r')
 plt.ylim(-1,1)
 plt.show()
-plt.plot(u, np.sqrt(Pinst(nu)))
+plt.plot(u_cut, np.sqrt(Pinst(nu_cut)))
 plt.yscale('log')
 plt.show()
 
