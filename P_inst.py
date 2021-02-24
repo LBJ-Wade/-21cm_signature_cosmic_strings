@@ -293,8 +293,8 @@ class HIRAXArrayConfig(object):
         density = hist/(2*np.pi*us*du)
         plt.plot(us, density)
 
-        s_spline = 50
-        k_spline = 3
+        s_spline = 20
+        k_spline = 2
         spl = spline(us, density, ext=1, k=k_spline, s=s_spline)
         plt.plot(us, spl(us))
         #plt.ylim(0, 0.1)
@@ -442,11 +442,11 @@ print(u_cut)
 '''
 save the result
 '''
-np.save('nu_cut', nu_cut)
-np.save('u_cut', u_cut)
+np.save('nu_cut_2', nu_cut)
+np.save('u_cut_2', u_cut)
 
 ps = Pinst(nu_cut)
-np.save('pinst_12_MWA_II', ps)
+np.save('pinst_12_MWA_II_2', ps)
 
 
 plt.plot(u_cut, nu_cut)

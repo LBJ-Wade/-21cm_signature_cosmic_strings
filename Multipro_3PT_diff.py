@@ -58,7 +58,7 @@ def deexitation_crosssection(t_k):
 
 
 
-patch_size = 256
+patch_size = 512
 patch_angle = 5. #in degree
 angle_per_pixel = patch_angle/patch_size
 c = angle_per_pixel
@@ -256,6 +256,109 @@ def power_spectrum(k, alpha=2, sigma=1.):
     out[k < 0.01] = 1 / (0.01) ** alpha
     return out
 
+def Pinst(l, token):
+    if token == 0:
+        dummy = np.zeros((len(l), len(l[1])))
+        u = l / (2 * np.pi)
+        for i in range(0, len(u)):
+            for k in range(0, len(u[1])):
+                index = 0
+                for j in range(0, len(Inter_ps_u)):
+                    if u[i, k] > Inter_ps_u.max():
+                        index = np.pi
+                        break
+                    if u[i, k] < Inter_ps_u[j]:
+                        index = j
+                        break
+                    else:
+                        continue
+                if index == np.pi:
+                    # dummy[i,k] = -1000
+                    continue
+                if index - 1 < 0:
+                    u_down = 0
+                else:
+                    u_down = Inter_ps_u[index - 1]
+                u_up = Inter_ps_u[index]
+                if index - 1 < 0:
+                    dummy[i, k] = Inter_ps[index] - (Inter_ps[index + 1] - Inter_ps[index]) / (
+                                Inter_ps_u[index + 1] - Inter_ps_u[index]) * (u_up - u[i, k])
+                else:
+                    dummy[i, k] = Inter_ps[index - 1] + (Inter_ps[index] - Inter_ps[index - 1]) / (
+                                Inter_ps_u[index] - Inter_ps_u[index - 1]) * (u[i, k] - u_down)
+        return dummy
+    else:
+        dummy = np.zeros((len(l), len(l[1])))
+        u = l / (2 * np.pi)
+        for i in range(0, len(u)):
+            for k in range(0, len(u[1])):
+                index = 0
+                for j in range(0, len(Inter_ps_u)):
+                    if u[i, k] > Inter_ps_u.max():
+                        index = np.pi
+                        break
+                    if u[i, k] < Inter_ps_u[j]:
+                        index = j
+                        break
+                    else:
+                        continue
+                if index == np.pi:
+                    # dummy[i,k] = -1000
+                    continue
+                if index - 1 < 0:
+                    u_down = 0
+                else:
+                    u_down = Inter_ps_u[index - 1]
+                u_up = Inter_ps_u[index]
+                if index - 1 < 0:
+                    dummy[i, k] = Inter_ps[index] - (Inter_ps[index + 1] - Inter_ps[index]) / (
+                            Inter_ps_u[index + 1] - Inter_ps_u[index]) * (u_up - u[i, k])
+                else:
+                    dummy[i, k] = Inter_ps[index - 1] + (Inter_ps[index] - Inter_ps[index - 1]) / (
+                            Inter_ps_u[index] - Inter_ps_u[index - 1]) * (u[i, k] - u_down)
+
+        dummy_full = np.zeros((N, N))
+        for i in range(0, len(dummy[1])):
+            for j in range(0, len(dummy)):
+                dummy_full[j, i] = dummy[j, i]
+
+        for i in range(0, len(dummy[1])+1):
+            for j in range(0, len(dummy)):
+                dummy_full[N - j - 1, N - i - 1] = dummy_full[j, i]
+        dummy_full = np.fft.fftshift(dummy_full)
+
+        for a in range(int(N/2.),N):
+            for b in range(int(N/4.), int(3*N/4.)):
+                dummy_full[b,a] = dummy_full[b+1,a]
+
+        return np.fft.fftshift(dummy_full)
+
+def GRF_inst():
+    real_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=l_inst.shape) * lpix / (2.0 * np.pi)
+    imaginary_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=l_inst.shape) * lpix / (2.0 * np.pi)
+
+    # Get map in real space and return
+    ft_map = (real_part + imaginary_part * 1.0j) * l_inst.shape[0] ** 2
+
+    ft_map[0, 0] = 0.0
+
+    grf_inst = np.zeros((N, N)) + 1J * np.zeros((N, N))
+    for i in range(0, len(ft_map[1])):
+        for j in range(0, len(ft_map)):
+            grf_inst[j, i] = ft_map[j, i]
+
+    for i in range(0, len(ft_map[1])):
+        for j in range(0, len(ft_map)):
+            grf_inst[N - j - 1, N - i - 1] = ft_map[j, i]
+
+    grf_inst = np.fft.fftshift(grf_inst)
+
+    for a in range(int(N / 2.), N):
+        for b in range(int(N / 4.), int(3 * N / 4.)):
+            grf_inst[b, a] = grf_inst[b + 1, a]
+
+    return np.fft.fftshift(grf_inst)  # np.fft.irfft2(ft_map).real
+
 
 def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     #coordinate the dimensions of wake and shift
@@ -312,7 +415,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
     np.random.seed(j*13)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
-    if foreg_type==5:
+    if foreg_type == 5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -336,19 +439,19 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if fg_type == 6:
         pspectrum = foreground(l, 6)
     epsilon_fgr = eps_fg
-    if foreg_type ==1:
+    if foreg_type == 1:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 2:
-        filter_function = ft_sig/(ft_sig + np.fft.fftshift(pspectrum))
-    if foreg_type ==5:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) +foreground(l, 6)))
-    if foreg_type==3:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum) )
-    if foreg_type==4:
-        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum))
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
+    if foreg_type == 5:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + Pl1))
+    if foreg_type == 3:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
+    if foreg_type == 4:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 6:
-        filter_function = ft_sig /(ft_sig + np.fft.fftshift(pspectrum))
-    if foreg_type==5:
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
+    if foreg_type == 5:
         grf_fg = np.fft.fft2(grf) * foreground(l, 1) ** 0.5 * 1e-3  # in Kelvin
         grf_fg_II = np.fft.fft2(grf_II) * foreground(l, 2) ** 0.5 * 1e-3
         grf_fg_III = np.fft.fft2(grf_III) * foreground(l, 3) ** 0.5 * 1e-3
@@ -357,15 +460,17 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     else:
         grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
     #grf_fg2 = grf2 * pspectrum ** 0.5 * 1e-3  # in Kelvin
+    noise_ps_inst = GRF_inst()
+    noise_ps_inst_shift = np.fft.fftshift(noise_ps_inst)
     if foreg_type==5:
-        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6))* 1e3 * -delta_z * epsilon_fgr)
+        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6) + noise_ps_inst*1e-3)* 1e3 * -delta_z * epsilon_fgr) #noise_ps_inst*1e-3
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
 
-    reduc = 1#e-1
+    reduc = 1#e1
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -374,6 +479,8 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         for l in range(1, N):
             #if l==256 and k==256:
             if 254<l<258 and 254<k<258:
+                continue
+            if noise_ps_inst_shift[k,l]==0:
                 continue
             threepoint += ft_ordered[k][l] * ft_ordered[N - k][N - l] * ft_ordered[N - l][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k][N - l] * ft_ordered_signal[N - l][k]
@@ -390,11 +497,17 @@ def combine_complex(a, b):
             dummy.append(a[i]+1j*b[i])
     return dummy
 
+def rfftfreq(n, d=1.0):
+    val = 1.0 / (n * d)
+    n_half = n // 2 + 1
+    results = np.arange(0, n_half, dtype=int)
+    return results * val
 
-n = 10000
-parts = 100
+n = 1
+parts = 1
 foreg_type = 5
-eps_fg = 0.08
+eps_fg = 0.001
+print('Without noise ps, only pixel restriction')
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
@@ -407,8 +520,22 @@ threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
 LCDM_ps = np.load('angular_ps_12.npy')
-Inter_ps = np.load('pinst_12_MWA_II.npy')
-Inter_ps_u = np.load('u_cut.npy')
+Inter_ps = np.load('pinst_12_MWA_II_2.npy')
+Inter_ps_u = np.load('u_cut_2.npy')
+shape = [N,N]
+lpix = 360.0 / patch_angle
+lx = rfftfreq(shape[0]) * shape[0] * lpix
+ly = np.fft.fftfreq(shape[0]) * shape[0] * lpix
+l_inst = np.sqrt(lx[np.newaxis, :] ** 2 + ly[:, np.newaxis] ** 2)
+Pl = Pinst(l_inst,0)
+Pl1 = Pinst(l_inst,1)
+
+'''
+plt.imshow(np.fft.fftshift(GRF_inst()).real)
+plt.show()
+'''
+
+
 threepoint_average = []#np.ndarray(np.zeros(n), dtype=complex)
 threepoint_average_signal = []#np.ndarray(np.zeros(n), dtype=complex)
 for k in range(0, parts):

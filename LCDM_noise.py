@@ -436,7 +436,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = Pinst(l)
+    Pl = foreground(l,1)
 
     real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -532,10 +532,10 @@ for k in range(0, 10):
 print(np.abs(np.mean(mean)))
 print(np.mean(std))'''
 
-'''grf = np.random.normal(0, 1, size=(patch_size, patch_size))
-fake_field = LCDM(180*mag_k/np.pi)**0.5*np.fft.fft2(grf)
-print(np.mean(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))
-print(np.std(np.fft.ifft2(fg_normalize(fake_field, 6)[0]*1e3).real))'''
+grf = np.random.normal(0, 1, size=(patch_size, patch_size))
+fake_field = foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)
+print(np.abs(np.mean(fg_normalize(fake_field, 1)[0]*1e3)))
+print(np.std(fg_normalize(fake_field, 1)[0]*1e3))
 
 
 grf = GRF_generator(5, [N, N])
@@ -548,12 +548,19 @@ for i in range(0, len(grf[1])):
     for j in range(0, len(grf)):
         grf_inst[len(grf)-j-1, N-i-1] = grf[j, i]
 
+'''x=np.fft.fftshift(grf_inst.real)
+counter =0
+for i in range(0,N):
+    for j in range(0, N):
+        if x[i,j]!=0:
+            counter +=1
+print(counter/512**2)'''
 
 plt.imshow(np.fft.fftshift(grf_inst.real))
 plt.colorbar()
 plt.show()
-print(np.abs(np.mean(grf)))
-print(np.std(grf))
+print(np.abs(np.mean(fg_normalize(grf_inst, 1)[0]*1e3)))
+print(np.std(fg_normalize(grf_inst, 1)[0]*1e3))
 
 '''plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')
@@ -578,20 +585,21 @@ plt.show()'''
 '''x = np.array([0.216518,     0.313392,       0.469813,        0.708374,      1.06183,     1.59342,       2.39161,        3.58803,       5.38264,           8.07420, 12.1110,14])
 y = np.array([2.5775220e+13, 7.0157119e+13, 9.7912021e+13, 2.5893861e+14, 6.9986468e+14, 2.3962459e+15, 6.8343556e+15, 1.3656459e+16, 2.4723744e+16, 3.8448373e+16, 9.1288065e+16, 1.5238e+17])
 '''
-fig, axs = plt.subplots(2, 1, sharex=True)
+'''fig, axs = plt.subplots(2, 1, sharex=True)
 fig.subplots_adjust(hspace=0)
-axs[1].plot(Inter_ps_u, Inter_ps, label='$P_{inst}$')
-axs[1].plot(Inter_ps_u, foreground(Inter_ps_u*2*np.pi, 1), label='$P_{fg1}\cdot 10^1$')
-axs[1].plot(Inter_ps_u, foreground(180*Inter_ps_u/np.pi, 2), label='$P_{fg2}\cdot 10^7$')
+axs[1].plot(Inter_ps_u, Inter_ps, label='$P_{inst,MWA}(z=12)$')
+axs[1].plot(Inter_ps_u, foreground(Inter_ps_u*2*np.pi, 1), label=r'$P_{galactic\,\,synchrotron}(z=12)$')
+axs[1].plot(Inter_ps_u, foreground(180*Inter_ps_u/np.pi, 2), label=r'$P_{point\,\, sources}(z=12)$')
 
-axs[1].vlines(0.216518, 2.5775220e+8, 1e13)
+#axs[1].vlines(0.216518, 2.5775220e+8, 1e13)
 #axs[1].vlines(27.2505,1.0787888e+13, 3e13)
-axs[1].set(ylabel= '$P(k)\,\,\,$[mK'+'$^2$]')
-axs[1].set(xlabel='k $\,\,\,$ [1/degree]')
-axs[0].plot(z, -88.5*1/(np.pi*z) *np.sin(np.pi*z), label='$\delta T_{signal}$')
-axs[0].set(ylabel= '$\delta T_b^{wake}(k)\,\,\,$[mK]')
-axs[1].axvspan( 0.216518, 12.1110, color='lightgrey')
-axs[0].axvspan( 0.216518, 12.1110, color='lightgrey')
-axs[0].legend(loc='upper right')
+axs[1].set(ylabel= '$P(u)\,\,\,$[mK'+'$^2$]')
+axs[1].set_yscale('log')
+axs[1].set(xlabel='u ')
+axs[0].plot(Inter_ps_u, -18.6*1/(np.pi*(Inter_ps_u*2*np.pi)*np.pi/180) *np.sin(np.pi*(Inter_ps_u*2*np.pi)*np.pi/180), label='$\delta T_{signal}(z=12, G\mu=3\cdot 10^{-7},z_i=3000)$')
+axs[0].set(ylabel= '$\delta T_b^{wake}(u)\,\,\,$[mK]')
+#axs[1].axvspan( 0.216518, 12.1110, color='lightgrey')
+#axs[0].axvspan( 0.216518, 12.1110, color='lightgrey')
+axs[0].legend(loc='lower right')
 axs[1].legend(loc='upper right')
-plt.show()
+plt.show()'''
