@@ -444,7 +444,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if foreg_type == 2:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 5:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + Pl1))
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + eps_noise*Pl1))
     if foreg_type == 3:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 4:
@@ -460,10 +460,16 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     else:
         grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
     #grf_fg2 = grf2 * pspectrum ** 0.5 * 1e-3  # in Kelvin
-    noise_ps_inst = GRF_inst()
-    noise_ps_inst_shift = np.fft.fftshift(noise_ps_inst)
+    #noise_ps_inst = GRF_inst()
+    real_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+    imaginary_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+    noise_ps_inst = (real_part + imaginary_part * 1.0j)
+    ps_inst_shift = np.fft.fftshift(Pl1)
+    #plt.imshow(ps_inst_shift)
+    #plt.show()
+    #print(np.std(noise_ps_inst_shift))
     if foreg_type==5:
-        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6) + noise_ps_inst*1e-3)* 1e3 * -delta_z * epsilon_fgr) #noise_ps_inst*1e-3
+        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z * epsilon_fgr) #noise_ps_inst*1e-3
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
@@ -480,7 +486,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
             #if l==256 and k==256:
             if 254<l<258 and 254<k<258:
                 continue
-            if noise_ps_inst_shift[k,l]==0:
+            if ps_inst_shift[k,l]==0:
                 continue
             threepoint += ft_ordered[k][l] * ft_ordered[N - k][N - l] * ft_ordered[N - l][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k][N - l] * ft_ordered_signal[N - l][k]
@@ -503,16 +509,19 @@ def rfftfreq(n, d=1.0):
     results = np.arange(0, n_half, dtype=int)
     return results * val
 
-n = 1
-parts = 1
+n = 10000
+parts = 100
 foreg_type = 5
-eps_fg = 0.001
-print('Without noise ps, only pixel restriction')
+eps_fg = 0.09
+eps_noise = 1#0.1
+#print('Without noise ps, only pixel restriction')
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
 print('foreground removal '+ str(eps_fg))
+print('noise removal ' + str(eps_noise))
 print('gradient included: no')
 print('G\mu = ' + str(gmu_6))
+print('NOISE I')
 #print('NO FILTER!')
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
@@ -520,18 +529,22 @@ threepoint_average_i = multiprocessing.Array('d', range(n))
 threepoint_average_signal_r = multiprocessing.Array('d', range(n))
 threepoint_average_signal_i = multiprocessing.Array('d', range(n))
 LCDM_ps = np.load('angular_ps_12.npy')
-Inter_ps = np.load('pinst_12_MWA_II_2.npy')
-Inter_ps_u = np.load('u_cut_2.npy')
-shape = [N,N]
+Inter_ps = np.load('pinst_12_MWA_II.npy')
+Inter_ps_u = np.load('u_cut.npy')
+shape = [N, N]
 lpix = 360.0 / patch_angle
 lx = rfftfreq(shape[0]) * shape[0] * lpix
 ly = np.fft.fftfreq(shape[0]) * shape[0] * lpix
 l_inst = np.sqrt(lx[np.newaxis, :] ** 2 + ly[:, np.newaxis] ** 2)
-Pl = Pinst(l_inst,0)
-Pl1 = Pinst(l_inst,1)
+Pl = Pinst(l_inst, 0)
+Pl1 = Pinst(l_inst, 1)
+
+
+
+
 
 '''
-plt.imshow(np.fft.fftshift(GRF_inst()).real)
+plt.imshow(np.fft.fftshift(Pl1))
 plt.show()
 '''
 

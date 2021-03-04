@@ -436,9 +436,9 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = foreground(l,1)
+    Pl = foreground(l,2)
 
-    real_part = np.sqrt(0.5* Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
+    real_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
 
     # Get map in real space and return
@@ -446,7 +446,7 @@ def GRF_generator(ang, shape, seed=None):
 
     ft_map[0, 0] = 0.0
 
-    return ft_map#np.fft.irfft2(ft_map).real
+    return ft_map #np.fft.irfft2(ft_map).real
 
 
 def GRF_spec(kappa, l_edges, ang):
@@ -532,10 +532,10 @@ for k in range(0, 10):
 print(np.abs(np.mean(mean)))
 print(np.mean(std))'''
 
-grf = np.random.normal(0, 1, size=(patch_size, patch_size))
-fake_field = foreground(180*mag_k/np.pi, 1)**0.5*np.fft.fft2(grf)
-print(np.abs(np.mean(fg_normalize(fake_field, 1)[0]*1e3)))
-print(np.std(fg_normalize(fake_field, 1)[0]*1e3))
+grf = np.random.normal(0, 2, size=(patch_size, patch_size))
+fake_field = foreground(180*mag_k/np.pi, 2)**0.5*np.fft.fft2(grf)
+print(np.abs(np.mean(fg_normalize(fake_field, 2)[0]*1e3)))
+print(np.std(fg_normalize(fake_field, 2)[0]*1e3))
 
 
 grf = GRF_generator(5, [N, N])
@@ -555,12 +555,22 @@ for i in range(0,N):
         if x[i,j]!=0:
             counter +=1
 print(counter/512**2)'''
+l = mag_k*180/np.pi
+Pl = Pinst(l)
 
-plt.imshow(np.fft.fftshift(grf_inst.real))
+real_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=(N, N))
+imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=(N, N))
+
+    # Get map in real space and return
+ft_map = (real_part + imaginary_part*1.0j)
+
+plt.imshow(ft_map.real)
 plt.colorbar()
 plt.show()
-print(np.abs(np.mean(fg_normalize(grf_inst, 1)[0]*1e3)))
-print(np.std(fg_normalize(grf_inst, 1)[0]*1e3))
+print(np.abs(np.mean(ft_map)))
+print(np.std(ft_map))
+print(np.abs(np.mean(grf_inst)))
+print(np.std(grf_inst))
 
 '''plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')

@@ -442,11 +442,11 @@ print(u_cut)
 '''
 save the result
 '''
-np.save('nu_cut_2', nu_cut)
-np.save('u_cut_2', u_cut)
+#np.save('nu_cut_2', nu_cut)
+#np.save('u_cut_2', u_cut)
 
 ps = Pinst(nu_cut)
-np.save('pinst_12_MWA_II_2', ps)
+#np.save('pinst_12_MWA_II_2', ps)
 
 
 plt.plot(u_cut, nu_cut)

@@ -57,7 +57,7 @@ N = 512
 patch_size = N
 c = 5./N
 angle_per_pixel = c
-z = 30
+z = 12
 ####################
 foreground_type = 5
 ####################
@@ -295,7 +295,7 @@ for k in range(0, n):
     bins = 300
 
 
-    epsilon_fgr = 1e-3
+    epsilon_fgr = 1e-1
 
 
     if foreground_type==5:
