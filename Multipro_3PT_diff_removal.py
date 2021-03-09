@@ -8,6 +8,7 @@ import matplotlib.pyplot as plt
 import math
 import multiprocessing
 import warnings
+from scipy.optimize import curve_fit
 
 
 
@@ -473,24 +474,28 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     '''
     create the middle bin
     '''
-    grf_mid, alphas = random_alpha(fg_normalize(grf_fg, 1), fg_normalize(grf_fg_II, 2), fg_normalize(grf_fg_III, 3),fg_normalize(grf_fg_IV, 4))
+    alphas = random_alpha()
     '''
     create the other bins
     '''
-    grf_all = random_bins(fg_normalize(grf_fg, 1), fg_normalize(grf_fg_II, 2), fg_normalize(grf_fg_III, 3),fg_normalize(grf_fg_IV, 4), grf_mid, alphas, z_bins)
-    del grf_mid, alphas
+    grf_all, redshifts = random_bins(fg_normalize(grf_fg, 1), fg_normalize(grf_fg_II, 2), fg_normalize(grf_fg_III, 3), fg_normalize(grf_fg_IV, 4), alphas, z_bins)
+    del alphas
     '''
     '''
     if foreg_type==5:
-        grf_norm_fg = np.fft.fftshift(( grf_mid + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z ) #noise_ps_inst*1e-3
+        grf_norm_fg = (grf_all + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z  #noise_ps_inst*1e-3
         #fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4)
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
-    #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
+
+    if foreg_type==5:
+        grf_norm_fg_new = remove_fg(grf_norm_fg, redshifts)
+
+
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
 
-    #TODO: Foreground removal
+    #TODO: Foreground removal and shift
     reduc = 1#e1
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
@@ -529,40 +534,62 @@ def rfftfreq(n, d=1.0):
 removal
 '''
 
-def random_alpha(fg1, fg2, fg3, fg4):
-    dummy = np.zeros((N, N))+1J*np.zeros((N, N))
+def random_alpha():
     alphas = np.array([np.ones((N, N))*2.8, np.ones((N, N))*2.07, np.ones((N, N))*2.15, np.ones((N, N))*2.1])
-    for m in range(0, len(dummy)):
-        for n in range(0, len(dummy)):
+    for m in range(0, N):
+        for n in range(0, N):
             alpha1_plus = -np.random.normal(0, 0.1)
             alpha2_plus = -np.random.normal(0, 0.1)
             alpha3_plus = -np.random.normal(0, 0.1)
             alpha4_plus = -np.random.normal(0, 0.1)
-            dummy[m, n] = fg1[m, n]*(1420/(1+z_wake)*1/120)**alpha1_plus + fg2[m, n]*(1420 / (1 + z_wake) * 1 / 151)**alpha2_plus + fg3[m, n]*(1420 / (1 + z_wake) * 1 / 120)**alpha3_plus + fg4[m, n]*(1420 / (1 + z_wake) * 1 / (2 * 1e3))**alpha4_plus
             alphas[0, m, n] += -alpha1_plus
             alphas[1, m, n] += -alpha2_plus
             alphas[2, m, n] += -alpha3_plus
             alphas[3, m, n] += -alpha4_plus
-    return dummy, alphas
+    return alphas
 
-def random_bins(fg1, fg2, fg3, fg4, gf_mid, alphaa, number_z_bins):
+def random_bins(fg1, fg2, fg3, fg4, alphaa, number_z_bins):
     dummy = []
     all_grf_bins = []
     for i in range(1, int(number_z_bins/2)+1):
         dummy.append(z_wake + i*delta_z)
         dummy.append(z_wake - i*delta_z)
-    redshifts = np.sort(np.array(dummy))
-    for j in range(0, number_z_bins):
-        if j == number_z_bins/2+1:
-            all_grf_bins.append(gf_mid)
+    dummy.append(z_wake)
+    redshifts = np.sort(np.array(dummy)) # Middle of the redshift bins
+    for j in range(0, len(redshifts)):
         grf_bin_j = np.zeros((N, N))+1J*np.zeros((N, N))
         for m in range(0, len(grf_bin_j)):
             for n in range(0, len(grf_bin_j)):
-                grf_bin_j[m,n] = fg1*((1 + redshifts[j])/(1+z_wake))**alphaa[0,m,n] + fg2*((1 + redshifts[j])/(1+z_wake))**alphaa[1,m,n] + fg3*((1 + redshifts[j])/(1+z_wake))**alphaa[2,m,n] + fg4*((1 + redshifts[j])/(1+z_wake))**alphaa[3,m,n]
+                grf_bin_j[m,n] = fg1[m, n]*(1420/(1+z_wake)*1/120)**2.8*(1420/(1+redshifts[j])*1/120)**-alphaa[0,m,n] + fg2[m, n]*(1420 / (1 + z_wake) * 1 / 151)**2.07*(1420/(1+redshifts[j])*1/151)**-alphaa[1,m,n] + fg3[m, n]*(1420 / (1 + z_wake) * 1 / 120)**2.15*(1420/(1+redshifts[j])*1/120)**-alphaa[2,m,n] + fg4[m, n]*(1420 / (1 + z_wake) * 1 / (2 * 1e3))**2.1*(1420/(1+redshifts[j])*1/(2* 1e3))**-alphaa[3,m,n]
         all_grf_bins.append(grf_bin_j)
-    return np.array(all_grf_bins)
+    all_grf_bins=np.array(all_grf_bins)
+    return all_grf_bins, redshifts
 
+def fit_function(z, a, b):
+    return b*(1+z)**a
 
+def remove_fg(all_fields, redshift):
+    real_all_fields = []
+    for i in range(0, len(all_fields)):
+        real_all_fields.append(np.fft.ifft2(all_fields[i]).real)
+    real_all_fields = np.array(real_all_fields)
+    grf_mid = real_all_fields[int(z_bins/2)+1]
+    dummy_x = redshift
+    dummy_y = np.zeros(len(redshift))
+    for m in range(0, N):
+        for n in range(0, N):
+            for o in range(0, len(dummy_x)):
+                dummy_y[o] = real_all_fields[o, m, n]
+            plt.plot(dummy_x, dummy_y, 'o')
+            plt.show()
+            pars, cov = curve_fit(f=fit_function, xdata=dummy_x, ydata=dummy_y, bounds=(0, 5))
+            grf_mid[m,n] = grf_mid[m, n] - fit_function(z_wake, pars[0], pars[1])
+            if m==0 and n==0:
+                plt.plot(dummy_x, dummy_y, 'o')
+                plt.plot(dummy_x, fit_function(dummy_x, pars[0], pars[1]))
+                plt.show()
+
+    return 0
 
 
 
@@ -572,7 +599,7 @@ def random_bins(fg1, fg2, fg3, fg4, gf_mid, alphaa, number_z_bins):
 
 n = 1
 parts = 1
-z_bins = 4
+z_bins = 10
 foreg_type = 5
 eps_fg = 0.09
 eps_noise = 1#0.1
