@@ -489,6 +489,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
 
     if foreg_type==5:
+        #TODO:signal adden before removal
         grf_norm_fg_new = remove_fg(grf_norm_fg, redshifts)
 
 
@@ -574,21 +575,29 @@ def remove_fg(all_fields, redshift):
         real_all_fields.append(np.fft.ifft2(all_fields[i]).real)
     real_all_fields = np.array(real_all_fields)
     grf_mid = real_all_fields[int(z_bins/2)+1]
+    plt.imshow(grf_mid)
+    plt.colorbar()
+    plt.show()
     dummy_x = redshift
-    dummy_y = np.zeros(len(redshift))
     for m in range(0, N):
         for n in range(0, N):
+            dummy_y = np.zeros(len(redshift))
             for o in range(0, len(dummy_x)):
                 dummy_y[o] = real_all_fields[o, m, n]
-            plt.plot(dummy_x, dummy_y, 'o')
-            plt.show()
-            pars, cov = curve_fit(f=fit_function, xdata=dummy_x, ydata=dummy_y, bounds=(0, 5))
-            grf_mid[m,n] = grf_mid[m, n] - fit_function(z_wake, pars[0], pars[1])
-            if m==0 and n==0:
-                plt.plot(dummy_x, dummy_y, 'o')
-                plt.plot(dummy_x, fit_function(dummy_x, pars[0], pars[1]))
+            pars, cov = curve_fit(f=fit_function, xdata=(dummy_x-np.min(dummy_x)+0.01)*1000, ydata=dummy_y, bounds=(-np.inf, np.inf))
+            grf_mid[m,n] = grf_mid[m, n] - fit_function((z_wake-np.min(dummy_x)+0.01)*1000, pars[0], pars[1])
+            '''if m==0 and n==0:
+                plt.plot((dummy_x-np.min(dummy_x)+0.01)*1000, dummy_y, 'o')
+                plt.plot((dummy_x-np.min(dummy_x)+0.01)*1000, fit_function((dummy_x-np.min(dummy_x)+0.01)*1000, pars[0], pars[1]))
                 plt.show()
-
+            '''
+            del dummy_y
+    plt.imshow(grf_mid)
+    plt.colorbar()
+    plt.show()
+    plt.imshow(np.fft.ifft2(np.fft.fft2(grf_mid)))
+    plt.colorbar()
+    plt.show()
     return 0
 
 
