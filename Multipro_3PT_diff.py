@@ -442,7 +442,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if foreg_type == 1:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 2:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
+        filter_function = ft_sig/ (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 5:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + eps_noise*Pl1))
     if foreg_type == 3:
@@ -469,14 +469,14 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     #plt.show()
     #print(np.std(noise_ps_inst_shift))
     if foreg_type==5:
-        grf_norm_fg = np.fft.fftshift((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z * epsilon_fgr) #noise_ps_inst*1e-3
+        grf_norm_fg = np.fft.fftshift(((fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4)) * epsilon_fgr + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z) #noise_ps_inst*1e-3
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
     #grf_norm_fg2 = np.fft.fftshift(fg_normalize(grf_fg2, fg_type) * 1e3 * -delta_z * epsilon_fgr)
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
 
-    reduc = 1#e1
+    reduc = 1#e-3
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0

@@ -415,13 +415,13 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*13)
+    np.random.seed(j*14)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type == 5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_III = np.random.normal(0., 1., size=(patch_size, patch_size))
         grf_IV = np.random.normal(0., 1., size=(patch_size, patch_size))
-        grf_LCDM = np.random.normal(0., 1., size=(patch_size, patch_size))
+        #grf_LCDM = np.random.normal(0., 1., size=(patch_size, patch_size))
     #grf2 = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     #kx, ky = np.meshgrid(np.fft.fftshift(2 * math.pi * np.fft.fftfreq(N, c)), np.fft.fftshift( 2 * math.pi * np.fft.fftfreq(N, c)))
     kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
@@ -446,7 +446,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     if foreg_type == 2:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 5:
-        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + eps_noise*Pl1))
+        filter_function = ft_sig / (ft_sig + np.fft.fftshift(foreground(l, 1) + foreground(l, 2) + foreground(l, 3) + foreground(l, 4) + foreground(l, 6) + Pl1))
     if foreg_type == 3:
         filter_function = ft_sig / (ft_sig + np.fft.fftshift(pspectrum))
     if foreg_type == 4:
@@ -458,18 +458,18 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
         grf_fg_II = np.fft.fft2(grf_II) * foreground(l, 2) ** 0.5 * 1e-3
         grf_fg_III = np.fft.fft2(grf_III) * foreground(l, 3) ** 0.5 * 1e-3
         grf_fg_IV = np.fft.fft2(grf_IV) * foreground(l, 4) ** 0.5 * 1e-3
-        grf_fg_LCDM = np.fft.fft2(grf_LCDM) * foreground(l, 6) ** 0.5 * 1e-3
+        #grf_fg_LCDM = np.fft.fft2(grf_LCDM) * foreground(l, 6) ** 0.5 * 1e-3
         del grf, grf_II, grf_III, grf_IV
-        del l, mag_k, kx, ky
+        del mag_k, kx, ky
     else:
         grf_fg = grf * pspectrum ** 0.5 * 1e-3  # in Kelvin
 
     '''
     Interfeometer noise
     '''
-    real_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
-    imaginary_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
-    noise_ps_inst = (real_part + imaginary_part * 1.0j)
+    #real_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+    #imaginary_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+    #noise_ps_inst = (real_part + imaginary_part * 1.0j)
     ps_inst_shift = np.fft.fftshift(Pl1)
     '''
     create the middle bin
@@ -478,26 +478,26 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     '''
     create the other bins
     '''
-    grf_all, redshifts = random_bins(fg_normalize(grf_fg, 1), fg_normalize(grf_fg_II, 2), fg_normalize(grf_fg_III, 3), fg_normalize(grf_fg_IV, 4), alphas, z_bins)
-    del alphas
+    grf_all, redshifts = random_bins(fg_normalize(grf_fg, 1), fg_normalize(grf_fg_II, 2), fg_normalize(grf_fg_III, 3), fg_normalize(grf_fg_IV, 4), alphas, z_bins, l)
+    del alphas, l
     '''
     '''
-    if foreg_type==5:
-        grf_norm_fg = (grf_all + fg_normalize(grf_fg_LCDM, 6) + eps_noise*noise_ps_inst*1e-3)* 1e3 * -delta_z  #noise_ps_inst*1e-3
-        #fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4)
+    if foreg_type == 5:
+        grf_norm_fg = ( grf_all ) * 1e3 * -delta_z  #noise_ps_inst*1e-3
+        #fg_normalize(grf_fg, 1) + fg_normalize(grf_fg_II, 2) + fg_normalize(grf_fg_III, 3) + fg_normalize(grf_fg_IV, 4) + fg_normalize(grf_LCDM, 6) + eps_noise*noise_ps_inst*1e-3
     else:
         grf_norm_fg = np.fft.fftshift(fg_normalize(grf_fg, fg_type)*1e3*-delta_z*epsilon_fgr)
 
-    if foreg_type==5:
-        #TODO:signal adden before removal
+    if foreg_type == 5:
         grf_norm_fg_new = remove_fg(grf_norm_fg, redshifts)
+        grf_norm_fg[int(z_bins/2)+1] = grf_norm_fg[int(z_bins/2)+1] + np.fft.fftshift(ft_sig)
+        grf_norm_fg_new_sig = remove_fg(grf_norm_fg, redshifts)
 
 
-    ft_signal = (ft_sig + grf_norm_fg) * filter_function
-    ft = grf_norm_fg * filter_function
+    ft_signal = grf_norm_fg_new_sig  * filter_function
+    ft = grf_norm_fg_new * filter_function
 
-    #TODO: Foreground removal and shift
-    reduc = 1#e1
+    reduc = 1#e-2
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
@@ -549,7 +549,7 @@ def random_alpha():
             alphas[3, m, n] += -alpha4_plus
     return alphas
 
-def random_bins(fg1, fg2, fg3, fg4, alphaa, number_z_bins):
+def random_bins(fg1, fg2, fg3, fg4, alphaa, number_z_bins, l_mode):
     dummy = []
     all_grf_bins = []
     for i in range(1, int(number_z_bins/2)+1):
@@ -558,12 +558,25 @@ def random_bins(fg1, fg2, fg3, fg4, alphaa, number_z_bins):
     dummy.append(z_wake)
     redshifts = np.sort(np.array(dummy)) # Middle of the redshift bins
     for j in range(0, len(redshifts)):
+        real_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+        imaginary_part = np.sqrt(0.5 * Pl1) * np.random.normal(loc=0., scale=1., size=(N, N))
+        noise_ps_inst = (real_part + imaginary_part * 1.0j)
+        gr_CDM = np.fft.fft2(np.random.normal(0, 1, size=(patch_size, patch_size))) * foreground(l_mode, 6) ** 0.5 * 1e-3
+        fg6 = fg_normalize(gr_CDM, 6)
         grf_bin_j = np.zeros((N, N))+1J*np.zeros((N, N))
         for m in range(0, len(grf_bin_j)):
             for n in range(0, len(grf_bin_j)):
-                grf_bin_j[m,n] = fg1[m, n]*(1420/(1+z_wake)*1/120)**2.8*(1420/(1+redshifts[j])*1/120)**-alphaa[0,m,n] + fg2[m, n]*(1420 / (1 + z_wake) * 1 / 151)**2.07*(1420/(1+redshifts[j])*1/151)**-alphaa[1,m,n] + fg3[m, n]*(1420 / (1 + z_wake) * 1 / 120)**2.15*(1420/(1+redshifts[j])*1/120)**-alphaa[2,m,n] + fg4[m, n]*(1420 / (1 + z_wake) * 1 / (2 * 1e3))**2.1*(1420/(1+redshifts[j])*1/(2* 1e3))**-alphaa[3,m,n]
+                grf_bin_j[m, n] = (fg1[m, n] * (1420 / (1 + z_wake) * 1 / 120) ** 2.8 * (
+                            1420 / (1 + redshifts[j]) * 1 / 120) ** -alphaa[0, m, n] + fg2[m, n] * (
+                                              1420 / (1 + z_wake) * 1 / 151) ** 2.07 * (
+                                              1420 / (1 + redshifts[j]) * 1 / 151) ** -alphaa[1, m, n] + fg3[m, n] * (
+                                              1420 / (1 + z_wake) * 1 / 120) ** 2.15 * (
+                                              1420 / (1 + redshifts[j]) * 1 / 120) ** -alphaa[2, m, n] + fg4[m, n] * (
+                                              1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** 2.1 * (
+                                              1420 / (1 + redshifts[j]) * 1 / (2 * 1e3)) ** -alphaa[3, m, n]) * (1 + 0.01 *np.sin((1+redshifts[j])*wavelength_sin_func)) + fg6[
+                                      m, n] + noise_ps_inst[m, n] * 1e-3
         all_grf_bins.append(grf_bin_j)
-    all_grf_bins=np.array(all_grf_bins)
+    all_grf_bins = np.array(all_grf_bins)
     return all_grf_bins, redshifts
 
 def fit_function(z, a, b):
@@ -575,9 +588,6 @@ def remove_fg(all_fields, redshift):
         real_all_fields.append(np.fft.ifft2(all_fields[i]).real)
     real_all_fields = np.array(real_all_fields)
     grf_mid = real_all_fields[int(z_bins/2)+1]
-    plt.imshow(grf_mid)
-    plt.colorbar()
-    plt.show()
     dummy_x = redshift
     for m in range(0, N):
         for n in range(0, N):
@@ -586,19 +596,12 @@ def remove_fg(all_fields, redshift):
                 dummy_y[o] = real_all_fields[o, m, n]
             pars, cov = curve_fit(f=fit_function, xdata=(dummy_x-np.min(dummy_x)+0.01)*1000, ydata=dummy_y, bounds=(-np.inf, np.inf))
             grf_mid[m,n] = grf_mid[m, n] - fit_function((z_wake-np.min(dummy_x)+0.01)*1000, pars[0], pars[1])
-            '''if m==0 and n==0:
+            if m==0 and n==0:
                 plt.plot((dummy_x-np.min(dummy_x)+0.01)*1000, dummy_y, 'o')
                 plt.plot((dummy_x-np.min(dummy_x)+0.01)*1000, fit_function((dummy_x-np.min(dummy_x)+0.01)*1000, pars[0], pars[1]))
                 plt.show()
-            '''
             del dummy_y
-    plt.imshow(grf_mid)
-    plt.colorbar()
-    plt.show()
-    plt.imshow(np.fft.ifft2(np.fft.fft2(grf_mid)))
-    plt.colorbar()
-    plt.show()
-    return 0
+    return np.fft.fftshift(np.fft.fft2(grf_mid))
 
 
 
@@ -606,12 +609,13 @@ def remove_fg(all_fields, redshift):
 
 '''program start'''
 
-n = 1
-parts = 1
+n = 1000
+parts = 10
 z_bins = 10
 foreg_type = 5
-eps_fg = 0.09
+eps_fg = 1#e-1
 eps_noise = 1#0.1
+wavelength_sin_func = 500*2**3
 #print('Without noise ps, only pixel restriction')
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
@@ -620,7 +624,8 @@ print('noise removal ' + str(eps_noise))
 print('gradient included: no')
 print('G\mu = ' + str(gmu_6))
 print('NOISE I')
-#print('NO FILTER!')
+print('WITH FILTER!')
+print('Wavelength sine: 2pi/lambda = ' + str(wavelength_sin_func))
 
 threepoint_average_r = multiprocessing.Array('d', range(n))
 threepoint_average_i = multiprocessing.Array('d', range(n))
