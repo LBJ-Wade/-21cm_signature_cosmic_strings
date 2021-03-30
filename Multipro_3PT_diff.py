@@ -413,7 +413,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
 
 
 def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoint_average_signal_r, threepoint_average_signal_i, fg_type):
-    np.random.seed(j*13)
+    np.random.seed(j*14)
     grf = np.fft.fft2(np.random.normal(0, 1, size = (patch_size, patch_size)))
     if foreg_type == 5:
         grf_II = np.random.normal(0., 1., size=(patch_size, patch_size))
@@ -476,17 +476,19 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     ft_signal = (ft_sig + grf_norm_fg) * filter_function
     ft = grf_norm_fg * filter_function
 
-    reduc = 1#e-3
+    reduc = 1e-1
     ft_ordered = ft*reduc
     ft_ordered_signal = ft_signal*reduc
     threepoint = 0
     threepoint_signal = 0
+    counter =0
     for k in range(1, N):
         for l in range(1, N):
             #if l==256 and k==256:
             if 254<l<258 and 254<k<258:
                 continue
             if ps_inst_shift[k,l]==0:
+                counter +=1
                 continue
             threepoint += ft_ordered[k][l] * ft_ordered[N - k][N - l] * ft_ordered[N - l][k]
             threepoint_signal += ft_ordered_signal[k][l] * ft_ordered_signal[N - k][N - l] * ft_ordered_signal[N - l][k]
@@ -494,7 +496,7 @@ def multiprocessing_fun(j, threepoint_average_r, threepoint_average_i, threepoin
     threepoint_average_i[j] = (threepoint / (N-1) ** 2).imag
     threepoint_average_signal_r[j] = (threepoint_signal / (N-1) ** 2).real
     threepoint_average_signal_i[j] = (threepoint_signal / (N-1) ** 2).imag
-
+    print(counter)
 
 def combine_complex(a, b):
     dummy = []
@@ -509,11 +511,11 @@ def rfftfreq(n, d=1.0):
     results = np.arange(0, n_half, dtype=int)
     return results * val
 
-n = 10000
-parts = 100
+n = 1
+parts = 1
 foreg_type = 5
-eps_fg = 0.09
-eps_noise = 1#0.1
+eps_fg = 0.1
+eps_noise = 0#0.1
 #print('Without noise ps, only pixel restriction')
 print('N = '+str(n))
 print('angle = '+ str(patch_angle)+' with '+str(N)+' pixel')
@@ -521,7 +523,7 @@ print('foreground removal '+ str(eps_fg))
 print('noise removal ' + str(eps_noise))
 print('gradient included: no')
 print('G\mu = ' + str(gmu_6))
-print('NOISE I')
+#print('NOISE I')
 #print('NO FILTER!')
 
 threepoint_average_r = multiprocessing.Array('d', range(n))

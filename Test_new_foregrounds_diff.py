@@ -57,14 +57,14 @@ N = 512
 patch_size = N
 c = 5./N
 angle_per_pixel = c
-z = 12
+z = 13
 ####################
 foreground_type = 5
 ####################
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
 z_i = 3000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.02
+delta_f = 0.05
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
 #redshift of center of wake
@@ -83,7 +83,9 @@ T_gamma = 2.725*(1+z_wake)
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+deex_fit = (1e-13*(27598 - 8.5 + (-13797.5 - 13799.5)/(1 + (T_K/24.0322)**2.28305)**0.0136134))
+xc = 4*nback*deex_fit* 0.068/(2.85e-15 *T_gamma)
+#xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
@@ -106,7 +108,7 @@ else:
 
 wake_brightness = T_b* 1e3 #in mK
 wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)**0.5 * (z_wake + 1.)**0.5 *2.*np.sin(theta1)**2*1/np.cos(theta1)
-wake_thickness = -delta_z
+#wake_thickness = -delta_z
 print('The wake has a thickness of '+ str(wake_thickness)+'.')
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 wake_size_angle = [1., 1.] #in degree
@@ -247,11 +249,11 @@ def LCDM(l):
 
 
 
-n = 100
+n =75
 chi_square = []
 chi_square_nosig = []
 filter = False
-LCDM_ps = np.load('angular_ps_30.npy')
+LCDM_ps = np.load('angular_ps_13.npy')
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
@@ -295,7 +297,7 @@ for k in range(0, n):
     bins = 300
 
 
-    epsilon_fgr = 1e-1
+    epsilon_fgr = 0.9*1e-3
 
 
     if foreground_type==5:
@@ -359,6 +361,7 @@ for k in range(0, n):
             chi2 = binned_ps_check / (foreground(360 * k_bin_cents / (2 * math.pi), foreground_type) * bins * delta_z ** 2 * epsilon_fgr ** 2*(std_fg)**2)
     chi_square.append(np.sum(chi))
     chi_square_nosig.append(np.sum(chi2))
+print(np.mean(chi_square) * 300)
 print(np.mean(chi_square))
 print(np.mean(chi_square_nosig))
 print(np.abs(np.mean(chi_square)-np.mean(chi_square_nosig)))

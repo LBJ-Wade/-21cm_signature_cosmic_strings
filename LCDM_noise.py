@@ -436,7 +436,7 @@ def GRF_generator(ang, shape, seed=None):
     #grf1 = np.random.normal(2.7, 0.4, size=(l.shape[0], l.shape[1]))
     #grf2 = np.random.normal(2.55, 0.1, size=(l.shape[0], l.shape[1]))
     #grf3 = np.abs(np.random.normal(1, 0.25, size=(l.shape[0], l.shape[1])))
-    Pl = foreground(l,2)
+    Pl = LCDM(l)
 
     real_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
     imaginary_part = np.sqrt(0.5*Pl) * np.random.normal(loc=0., scale=1., size=l.shape) * lpix / (2.0 * np.pi)
@@ -446,7 +446,7 @@ def GRF_generator(ang, shape, seed=None):
 
     ft_map[0, 0] = 0.0
 
-    return ft_map #np.fft.irfft2(ft_map).real
+    return np.fft.irfft2(ft_map).real
 
 
 def GRF_spec(kappa, l_edges, ang):
@@ -495,7 +495,7 @@ kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
 #print(180*mag_k[0]/np.pi)
-LCDM_ps = np.load('angular_ps_30.npy')
+LCDM_ps = np.load('angular_ps_12.npy')
 Inter_ps = np.load('pinst_12_MWA_II.npy')
 Inter_ps_u = np.load('u_cut.npy')
 '''
@@ -532,13 +532,17 @@ for k in range(0, 10):
 print(np.abs(np.mean(mean)))
 print(np.mean(std))'''
 
-grf = np.random.normal(0, 2, size=(patch_size, patch_size))
-fake_field = foreground(180*mag_k/np.pi, 2)**0.5*np.fft.fft2(grf)
-print(np.abs(np.mean(fg_normalize(fake_field, 2)[0]*1e3)))
-print(np.std(fg_normalize(fake_field, 2)[0]*1e3))
+#grf = np.random.normal(0, 2, size=(patch_size, patch_size))
+#fake_field = foreground(180*mag_k/np.pi, 2)**0.5*np.fft.fft2(grf)
+#print(np.abs(np.mean(fg_normalize(fake_field, 2)[0]*1e3)))
+#print(np.std(fg_normalize(fake_field, 2)[0]*1e3))
 
-
-grf = GRF_generator(5, [N, N])
+#
+#grf = GRF_generator(5, [N, N])
+#plt.imshow(grf)
+#plt.colorbar()
+#plt.show()
+'''
 grf_inst = np.zeros((N, N)) + 1J*np.zeros((N, N))
 for i in range(0, len(grf[1])):
     for j in range(0, len(grf)):
@@ -547,7 +551,7 @@ for i in range(0, len(grf[1])):
 for i in range(0, len(grf[1])):
     for j in range(0, len(grf)):
         grf_inst[len(grf)-j-1, N-i-1] = grf[j, i]
-
+'''
 '''x=np.fft.fftshift(grf_inst.real)
 counter =0
 for i in range(0,N):
@@ -555,7 +559,7 @@ for i in range(0,N):
         if x[i,j]!=0:
             counter +=1
 print(counter/512**2)'''
-l = mag_k*180/np.pi
+'''l = mag_k*180/np.pi
 Pl = Pinst(l)
 
 real_part = np.sqrt(0.5 * Pl) * np.random.normal(loc=0., scale=1., size=(N, N))
@@ -570,19 +574,19 @@ plt.show()
 print(np.abs(np.mean(ft_map)))
 print(np.std(ft_map))
 print(np.abs(np.mean(grf_inst)))
-print(np.std(grf_inst))
+print(np.std(grf_inst))'''
 
-'''plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
+plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
 plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
-cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=30)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
+cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=12)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
-plt.show()'''
+plt.show()
 
 
 
