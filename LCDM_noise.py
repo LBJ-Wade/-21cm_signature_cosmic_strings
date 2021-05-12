@@ -3,6 +3,7 @@ import math
 import PyCosmo as pyco
 import matplotlib.pyplot as plt
 import scipy.integrate as integrate
+from scipy import  interpolate
 import scipy.constants
 import multiprocessing
 cosmo = pyco.Cosmo()
@@ -207,18 +208,17 @@ def deexitation_crosssection(t_k):
 
 
 
-N = 512
-patch_size = N
-c = 5./N
-angle_per_pixel =c
+patch_size = 512
+patch_angle = 5. #in degree
+angle_per_pixel = patch_angle/patch_size
+c = angle_per_pixel
+N = patch_size
 z = 12
-####################
-foreground_type = 2
-####################
-T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) *np.sqrt((0.26 + (1+z)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z)**0.5/2.5**0.5
-z_i = 1000
+
+#redshift string formation
+z_i = 3000
 #frequency bin: 10kHz = 0.01 MHz
-delta_f = 0.02
+delta_f = 0.05
 #thickness redshift bin (assuming we look at f in [f_0, f_0 + delta_f])
 delta_z = -delta_f/(1420)*(z+1)
 #redshift of center of wake
@@ -227,14 +227,19 @@ z_wake = z+delta_z/2
 gmu_6 = 0.3
 #string speed
 vsgammas_square = 1./3
-#temperature of HI atoms inside the wake [K]
+#temperature of HI atoms inside the wake [Kl
 T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
+#temperature of the cosmic gas for z<150
+T_g = 0.02*(1+z)**2
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
-xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+#xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
+deex_fit = (1e-13*(27598 - 8.5 + (-13797.5 - 13799.5)/(1 + (T_K/24.0322)**2.28305)**0.0136134))
+xc = 4*nback*deex_fit* 0.068/(2.85e-15 *T_gamma)
+print('We make use of an fit function for the deexcitation cross section')
 #fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
 #hydrogen of the universe is neutral and we assume the mass fraction of baryoni is:
 xHI = 0.75
@@ -250,6 +255,8 @@ wake_thickness = 24 * math.pi/15 * gmu_6 * 1e-6 * vsgammas_square**0.5 * (z_i+1)
 rot_angle_uv =0# math.pi/4 #rotation angle in the uv plane
 wake_size_angle = [1., 1.] #in degree
 shift_wake_angle = [0, 0]
+print(wake_thickness)
+print(delta_z)
 
 
 def signal_ft(size, anglewake, angleperpixel, shift, background_on):
@@ -271,7 +278,7 @@ def signal_ft(size, anglewake, angleperpixel, shift, background_on):
     for i in range(i_x, f_x):
         for j in range(i_y, f_y):
             #patch[i, j] = 1e3 * 1/(2.*np.sin(theta1)**2) * df_wake/delta_f * (i-i_x)*1./(f_x-i_x) * T_b # according to https://arxiv.org/pdf/1403.7522.pdf
-            patch[i, j] += wake_thickness*T_b  #(1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
+            patch[i, j] += wake_thickness*0+T_b  #(1e3*0.07 * (2*np.sin(theta1)**2)**-1* xc/(xc+1.)*2./3*((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**1.5) - 1e3*0.07*  (2*np.sin(theta1)**2)**-1 * xc/(xc+1.)*2.725/(20 * gmu_6**2 * vsgammas_square * (z_i+1.)) * 2/7. * ((1 + z_wake + dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5-(1 + z_wake - dz_wake/2. * (i-i_x)*1./(f_x-i_x))**3.5)) #in mK
     if rot_angle_uv!=0:
         for k in range(i_x, f_x):
             for l in range(i_y, f_y):
@@ -494,10 +501,35 @@ bins=300
 kx, ky = np.meshgrid(2 * math.pi * np.fft.fftfreq(N, c),
                              2 * math.pi * np.fft.fftfreq(N, c))
 mag_k = np.sqrt(kx ** 2 + ky ** 2)
+lll1 =np.linspace(1,2000,10000)
+lll = np.sort(180*np.split(mag_k[1],2)[0]/np.pi)
+print(lll)
+#print(lll)
 #print(180*mag_k[0]/np.pi)
 LCDM_ps = np.load('angular_ps_12.npy')
 Inter_ps = np.load('pinst_12_MWA_II.npy')
 Inter_ps_u = np.load('u_cut.npy')
+
+plt.plot(lll1, LCDM(lll1)/0.00015, label=r'$C_l^{\Lambda CDM}(\nu)$')
+ps_l =  []
+ps_sp =  []
+for i in range(0,512):
+    if GRF_spec(np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real,lll,5)[0][i]>2000:
+        break
+    ps_l.append(GRF_spec(np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real,lll,5)[0][i])
+    ps_sp.append(GRF_spec(np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real,lll,5)[1][i])
+ff = interpolate.splrep(ps_l,ps_sp,s=0)
+f = interpolate.splev( lll1,ff,der=0 )
+
+plt.plot(lll1,f/0.00015,label=r'$C_l^{wake}(\nu)$')
+#plt.plot(ps_l,np.array(ps_sp)/0.0002)
+plt.xlim(0,2000)
+plt.ylim(0,1)
+plt.xlabel(r'$l$')
+plt.ylabel(r'normalized angular power spectrum $C_l$')
+plt.legend(prop={'size':12})
+plt.show()
+
 '''
 n = 10
 chii = np.zeros(n)
@@ -576,17 +608,18 @@ print(np.std(ft_map))
 print(np.abs(np.mean(grf_inst)))
 print(np.std(grf_inst))'''
 
-plt.imshow((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z) )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
+plt.imshow(GRF_generator(5, [N, N]) + np.fft.ifft2(signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real )#+ np.fft.ifft2(1/wake_thickness*signal_ft(patch_size, wake_size_angle,  angle_per_pixel, shift_wake_angle, False)).real)
 plt.xlabel('degree')
 plt.ylabel('degree')
 my_ticks = ['$-2.5\degree$', '$-1.5\degree$', '$-0.5\degree$', '$0\degree$', '$0.5\degree$', '$1.5\degree$', '$2.5\degree$']
 plt.xticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 plt.yticks([0,  102,  204,  256, 308, 410, 511], my_ticks)
 cbar = plt.colorbar()
-cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=12)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
+cbar.set_label('$ \delta T_b^{\Lambda CDM} (z=12) + 0.1\cdot\delta T_b^{wake}(z=12)\,\,\,[$'+'mK'+'$]$', rotation=270, labelpad=20, size=11 )
 print(np.mean((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 print(np.std((GRF_generator(5, [N, N])+T_back2-1e3*2.725*(1+z))/(1+z)))
 plt.show()
+
 
 
 
