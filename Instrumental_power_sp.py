@@ -442,22 +442,8 @@ print(u_cut)
 '''
 save the result
 '''
-#np.save('nu_cut_2', nu_cut)
-#np.save('u_cut_2', u_cut)
+np.save('nu_cut', nu_cut)
+np.save('u_cut', u_cut)
 
 ps = Pinst(nu_cut)
-#np.save('pinst_12_MWA_II_2', ps)
-
-
-plt.plot(u_cut, nu_cut)
-plt.hlines(0, u_cut.min(), u_cut.max(), colors='r')
-plt.ylim(-1,1)
-plt.show()
-plt.plot(u_cut, np.sqrt(Pinst(nu_cut)))
-plt.yscale('log')
-plt.show()
-
-'''plt.plot(dist_ew, dist_ns, 'rx')
-plt.xlabel('meters')
-plt.ylabel('meters')
-plt.show()'''
+np.save('pinst_12_MWA_II', ps)
