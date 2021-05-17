@@ -51,7 +51,7 @@ angle_per_pixel = patch_angle/patch_size
 T_back2 = 0.1 * 0.62*1e-3/(0.33*1e-4) * np.sqrt((0.26 + (1+z_wake)**-3 * (1-0.26-0.042))/0.29)**-1 * (1+z_wake)**0.5/2.5**0.5
 
 
-def ps(k, l): #TODO: substitute 10 with the brightness temperature
+def ps(k, l):
     return T_back2**2 * (1 + (0.7*(1+z)**3*(cosmo.background.H_a(a=1.)**2/cosmo.background.H_a(a=1./(1+z))**2))**0.55*(k/np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))**2)**2  * cosmo.lin_pert.powerspec_a_k(a=1/(1+z), k=np.sqrt(k**2+l**2/((cosmo.background.dist_rad_a(1/(1+z)) + cosmo.background.dist_rad_a(1/(1+z+delta_z)))/2.)**2))
 
 
