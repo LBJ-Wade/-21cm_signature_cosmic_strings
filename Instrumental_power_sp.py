@@ -1,8 +1,6 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# In[59]:
-
+"""
+instrumental power spectrum for interferometer instruments
+"""
 
 from __future__ import (division, print_function, absolute_import,
                         unicode_literals)
@@ -20,7 +18,6 @@ from astropy import coordinates as coords
 from astropy import units
 
 from hirax_tools.utils import HARTRAO_COORD, pointing, lmn_coordinates
-
 
 class HIRAXArrayConfig(object):
     """
@@ -348,14 +345,25 @@ class HIRAXArrayConfig(object):
         return us, norm*n_u
 
 
+
+
 def rfftfreq(n, d=1.0):
+    """
+    real fourier transform grid
+    """
+
     val = 1.0 / (n * d)
     n_half = n // 2 + 1
     results = np.arange(0, n_half, dtype=int)
+
     return results * val
 
 
-def Pinst( n_u):
+def Pinst(n_u):
+    """
+    power spectrum for interferometer https://arxiv.org/abs/1704.01941
+    """
+
     return (((1420.*1e6/(1+z))**-1 * scipy.constants.c)**2 * T_sys**2 * N_p)/((n_u) * t_tot * d_nu * A_e**2)
 
 
@@ -388,18 +396,34 @@ def GRF_generator(ang, shape, seed=None):
     return np.fft.irfft2(ft_map).real
 
 
-#https://arxiv.org/pdf/1206.6945.pdf
+"""
+instrumental and redshift configuration
+"""
+
 z = 12 #redshift
+
 T_sky = 60 * 1e3 * (1420/((1.+z) * 300))**-2.5 #in mK
+
 T_inst = 100*1e3 #T_inst= T_receiver is suppressed. https://arxiv.org/pdf/1604.03751.pdf
+
 T_sys = T_sky + T_inst #temperature
+
 N_d = 256 #numper of tiles, 1 tile are 16 antennas, effective area per tile see below, for MWA II: https://core.ac.uk/download/pdf/195695824.pdf
+
 N_p = 100 #number of pointings: N_p Omega_p = 4 Pi f_sky
+
 A_e = 21.5 #effective total dish area, source: The EoR sensitivity of the Murchison Widefield Array
+
 t_tot = 1000*3600 #total integration time: 100h
+
 d_nu = 0.05*1e6 #bandwidth in Hz in that channel: 50kHz
 
-#read in MWA config, Phase I + II
+
+"""
+read in MWA config, Phase I + II
+-> any other configuration is possible, .txt. should contain coordinates (see Hirac Config clas)
+"""
+
 antennafile = open('256T_update.txt', 'r')
 dist_ns = []
 dist_ew = []
@@ -409,7 +433,10 @@ for line in antennafile.readlines():
     dist_ew.append(float(fields[3]))
 antennafile.close()
 
-# Make an array lyout of a 32x32 element array.
+"""
+create an array lyout of a 32x32 element array 
+"""
+
 array_conf = HIRAXArrayConfig(d_ns=dist_ns, d_ew=dist_ew, Ddish=2*np.sqrt(A_e/np.pi))
 
 u, nu = array_conf.nu(fid_freq=1420./(1+z))
@@ -417,6 +444,7 @@ u, nu = array_conf.nu(fid_freq=1420./(1+z))
 '''
 introducing a cut off for the spline
 '''
+
 marker =0
 nu_cut = []
 u_cut = []
@@ -442,6 +470,7 @@ print(u_cut)
 '''
 save the result
 '''
+
 np.save('nu_cut', nu_cut)
 np.save('u_cut', u_cut)
 
