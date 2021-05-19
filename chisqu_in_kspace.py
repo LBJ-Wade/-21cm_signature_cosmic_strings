@@ -523,11 +523,11 @@ def chi_square(data_sample_real, magnitude_k, fft_signal, alpha, foreground_type
 
     :param data_sample_real: data of a patch in the sky
     :param magnitude_k: magnitude of k map of this path
-    :param fft_signal: fouriertransform of the signal
+    :param fft_signal: Fourier transform of the string wake signal
     :param alpha:
     :param foreground_type:
     :param filter: Filter yes, no?
-    :return:
+    :return: chi² estimator
 
     """
 
@@ -598,56 +598,96 @@ def chi_square(data_sample_real, magnitude_k, fft_signal, alpha, foreground_type
                                  foreground_power_spectrum(k_bin_cents, 0.088, 3.0, 2.15, 32., 1)*bins +
                                  foreground_power_spectrum(k_bin_cents, 0.014, 1.0, 2.10, 35., 1)*bins))
 
-'''Section 3.2: define the filter funcitons'''
-
 
 def wien_filter(foreground_comp, k, fft_s):
+    """
+    Defines Wiener filter function
+
+    :param foreground_comp: foreground component
+    :param k: k grid
+    :param fft_s: Fourier transform of the string wake signal
+    :return: noise power spectrum, filter function
+
+    """
+
     pspec_signal = np.abs(fft_s)**2/patch_size**2
+
     pspec_noise = 0
+
     if foreground_comp == 0:
         pspec_noise = power_spectrum(k, power_law, sigma_noise)
+
     if foreground_comp == 1:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1)
+
     if foreground_comp == 2:
         pspec_noise = (foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1))
+
     if foreground_comp == 3:
         pspec_noise = foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1)
+
     if foreground_comp == 4:
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+
     return pspec_noise, pspec_signal/(pspec_noise + pspec_signal)
 
 
 def matched_filter(foreground_comp, k, fft_s):
+    """
+    Defines Matched filter function
+
+    :param foreground_comp: foreground component
+    :param k: k grid
+    :param fft_s: Fourier transform of the string wake signal
+    :return: noise power spectrum, filter function
+
+    """
+
     pspec_signal = np.abs(fft_s)**2/patch_size**2
+
     pspec_noise = 0
+
     if foreground_comp == 0:
         pspec_noise = power_spectrum(k, power_law, sigma_noise)
+
     if foreground_comp == 1:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1)
+
     if foreground_comp == 2:
         pspec_noise = (foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1))
+
     if foreground_comp == 3:
         pspec_noise = foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1)
+
     if foreground_comp == 4:
         pspec_noise = foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
+
     if foreground_comp == 5:
         pspec_noise = foreground_power_spectrum(k, 1100, 3.3, 2.80, 4.0, 1) + foreground_power_spectrum(k, 57, 1.1, 2.07, 1.0, 1) + foreground_power_spectrum(k, 0.088, 3.0, 2.15, 32., 1) + foreground_power_spectrum(k, 0.014, 1.0, 2.10, 35., 1)
-    #if foreground_comp == 6:
-    #    pspec_noise = ps_LCDM
+
     return pspec_noise, pspec_signal/pspec_noise
 
 
-#calculate the DELTAchi^2 for N datasambles in Fourier space for foregrounds
+"""
+simulation samples
+"""
+
 N = 10
+
+"""
+foreground type
+"""
+
 foreground = 1
+
 chi_list_signal = []
 chi_list = []
-#check, if the result is achieved by random fluctuations
 chi_list2 = []
-#check for improvement via filtration
 chi_filtered = []
+
 for l in range(0, N):
     out_signal = grf_foreground_signal(foreground, patch_size, 1)
     out_check = grf_foreground(foreground, patch_size, 1)
@@ -656,13 +696,21 @@ for l in range(0, N):
     chi_list_signal.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 0))
     chi_list2.append(chi_square(out_2[0], out_2[1], out_2[2], power_law, foreground, 1))
     chi_filtered.append(chi_square(out_signal[0], out_signal[1], out_signal[2], power_law, foreground, 1))
+
 print('Foreground noise check for foreground contaminant: '+str(foreground))
+
 print('For without signal: ' + str(np.mean(chi_list)))
+
 print('For with signal: ' + str(np.mean(chi_list_signal)))
+
 print('For without signal and filtered: ' + str(np.mean(chi_list2)))
+
 print('For with signal and filtered: ' + str(np.mean(chi_filtered)))
+
 print('With and without string signal: delta chi^2 = ' + str(np.abs(np.mean(chi_list)-np.mean(chi_list_signal))))
+
 print('With and without string signal and filtered: delta chi^2 = ' + str(np.abs(np.mean(chi_list2)-np.mean(chi_filtered))))
+
 print('With signal, with and without filter: delta chi^2 = ' + str(np.abs(np.mean(chi_filtered)-np.mean(chi_list_signal))))
 
 
