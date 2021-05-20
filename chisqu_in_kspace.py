@@ -1,5 +1,5 @@
 """
-calculation chi² statistic for string wakes in a noisy background
+Calculation chi² statistic for string wakes in a noisy background
 """
 
 import numpy as np
@@ -16,44 +16,64 @@ def deexitation_crosssection(t_k):
     """
     according to The Astrophysical Journal, 622:1356-1362, 2005 April 1, Table 2. Units [cm^3 s^-1]
     :param t_k: kinetic temperature
-    :return:
+    :return: de-excitation cross section
+
     """
+
     if t_k < 1:
         return 1.38e-13
+
     if 1 < t_k <= 2:
         return 1.38e-13 + (t_k - 1) * (1.43 - 1.38) * 1e-13
+
     if 2 < t_k <= 4:
         return 1.43e-13 + (t_k - 2) / 2 * (2.71 - 1.43) * 1e-13
+
     if 4 < t_k <= 6:
         return 2.71e-13 + (t_k - 4) / 2 * (6.6 - 2.71) * 1e-13
+
     if 6 < t_k <= 8:
         return 6.60e-13 + (t_k - 6) / 2 * (1.47e-12 - 6.6e-13)
+
     if 8 < t_k <= 10:
         return 1.47e-12 + (t_k - 8) / 2 * (2.88 - 1.47) * 1e-12
+
     if 10 < t_k <= 15:
         return 2.88e-12 + (t_k - 10) / 5 * (9.10 - 2.88) * 1e-12
+
     if 15 < t_k <= 20:
         return 9.1e-12 + (t_k - 15) / 5 * (1.78e-11 - 9.10 * 1e-12)
+
     if 20 < t_k <= 25:
         return 1.78e-11 + (t_k - 20) / 5 * (2.73 - 1.78) * 1e-11
+
     if 25 < t_k <= 30:
         return 2.73e-11 + (t_k - 25) / 5 * (3.67 - 2.73) * 1e-11
+
     if 30 < t_k <= 40:
         return 3.67e-11 + (t_k - 30) / 10 * (5.38 - 3.67) * 1e-11
+
     if 40 < t_k <= 50:
         return 5.38e-11 + (t_k - 40) / 10 * (6.86 - 5.38) * 1e-11
+
     if 50 < t_k <= 60:
         return 6.86e-11 + (t_k - 50) / 10 * (8.14 - 6.86) * 1e-11
+
     if 60 < t_k <= 70:
         return 8.14e-11 + (t_k - 60) / 10 * (9.25 - 8.14) * 1e-11
+
     if 70 < t_k <= 80:
         return 9.25e-11 + (t_k - 70) / 10 * (1.02e-10 - 9.25 * 1e-11)
+
     if 80 < t_k <= 90:
         return 1.02e-10 + (t_k - 80) / 10 * (1.11 - 1.02) * 1e-10
+
     if 90 < t_k <= 100:
         return 1.11e-10 + (t_k - 90) / 10 * (1.19 - 1.11) * 1e-10
+
     if 100 < t_k <= 200:
         return 1.19e-10 + (t_k - 100) / 100 * (1.75 - 1.19) * 1e-10
+
     if 200 < t_k <= 300:
         return 1.75e-10 + (t_k - 200) / 100 * (2.09 - 1.75) * 1e-10
     else:
@@ -94,14 +114,19 @@ T_K = 20 * gmu_6**2 * vsgammas_square * (z_i+1.)/(z_wake+1)
 #CMB temperature [K]
 T_gamma = 2.725*(1+z_wake)
 
+#temperature of the cosmic gas for z<150
+T_g = 0.02*(1+z)**2
+
 #background numberdensity hydrogen [cm^-3]
 nback=1.9e-7 *(1.+z_wake)**3
 
 #collision coeficcient hydrogen-hydrogen (density in the wake is 4* nback, Delta E for hyperfine is 0.068 [K], A_10 = 2.85e-15 [s^-1])
 xc = 4*nback*deexitation_crosssection(T_K)* 0.068/(2.85e-15 *T_gamma)
 
-"""fraction of baryonc mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
-hydrogen of the universe is neutral and we assume the mass fraction of baryons is:"""
+"""
+fraction of baryonic mass comprised of HI. Given that we consider redshifts of the dark ages, we can assume that all the
+hydrogen of the universe is neutral and we assume the mass fraction of baryons is:
+"""
 xHI = 0.75
 
 #background temperature [mK] [formula according to arXiv:2010.15843] (assume Omega_b, h, Omega_Lambda, Omega_m as in arXiv: 1405.1452[they use planck collaboration 2013b best fit])
@@ -130,6 +155,20 @@ theta2 = 0 #angle 2 in z-space
 wake brightness temperature [K]
 """
 T_b = 1e3* 0.07  *xc/(xc+1.)*(1-T_gamma/T_K)*np.sqrt(1.+z_wake)#*(2*np.sin(theta1)**2)**-1
+
+"""
+Including Diffusion effects
+"""
+
+if T_K > 3 * T_g:
+
+    T_b = (17 * xc / (xc + 1) * (1 - T_gamma / T_K) * 4 * np.sqrt(1. + z_wake) * ( 2 * np.sin(theta1) ** 2) ** -1)
+else:
+    if T_K < T_g:
+        T_b = (17 * xc / (xc + 1) * (1 - T_gamma / (3 * T_g)) * (1 + T_K / T_g) * np.sqrt(1. + z_wake) * (2 * np.sin(theta1) ** 2) ** -1 * T_g / T_K)
+    else:
+        T_b = (17 * xc / (xc + 1) * (1 - T_gamma / (3 * T_g)) * (1 + T_K / T_g) * np.sqrt(1. + z_wake) * (2 * np.sin(theta1) ** 2) ** -1)
+
 
 wake_brightness = T_b#in mK
 wake_size_angle = [1., 1.] #in degree
@@ -170,7 +209,7 @@ def power_spectrum(k, alpha=-2., sigma=1.):
 
 def foreground_power_spectrum(k, A_pure, beta, a, Xi, sigma):
     """
-    Parameters of RESIDUAL foreground components chosen according
+    Calculate the foreground power spectra, parameters of RESIDUAL foreground components chosen according
     to the table below
 
     :param k: k-space grid
@@ -387,6 +426,40 @@ def gaussian_random_field_with_signal(size = 100, sigma = 1., mean = 0., anglepe
     return grf, mag_k, ft_signal
 
 
+def fg_normalize(grf_fg, fg_type):
+    """
+    Normalize foregrounds (for reference see publication "...")
+
+    :param grf_fg: Gaussian random field of foreground type X
+    :param fg_type: foreground type X
+    :return: normalized (according to observational data)
+
+    """
+    if fg_type == 1:
+        mean, std, std_eff = 253 * (1420 / (1 + z_wake) * 1 / 120) ** -2.8, 1.3 * (
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.8, 69*(angle_per_pixel/(5/512))**(-3.3/2)
+    if fg_type == 2:
+        mean, std, std_eff = 38.6 * (1420 / (1 + z_wake) * 1 / 151) ** -2.07, 2.3 * (
+                    1420 / (1 + z_wake) * 1 / 151) ** -2.07, 1410*(angle_per_pixel/(5/512))**(-1.1/2)
+    if fg_type == 3:
+        mean, std, std_eff = 2.2 * (1420 / (1 + z_wake) * 1 / 120) ** -2.15, 0.05 * (
+                    1420 / (1 + z_wake) * 1 / 120) ** -2.15, 415*(angle_per_pixel/(5/512))**(-3.0/2)
+    if fg_type == 4:
+        mean, std, std_eff = 1e-4 * (1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 1e-5 * (
+                    1420 / (1 + z_wake) * 1 / (2 * 1e3)) ** -2.1, 81*(angle_per_pixel/(5/512))**(-1.0/2)
+    if fg_type == 6:
+        mean, std, std_eff = -2.72477, 0.0000508 * (1 + 30) / (1 + z), 189 * (1 + 30) / (1 + z)*(angle_per_pixel/(5/512))**(-2.0/2)
+    sum = 0
+    for i in range(0, len(grf_fg)):
+        for j in range(0, len(grf_fg)):
+            sum += np.abs(grf_fg[i, j]) ** 2
+    sum = sum - grf_fg[0, 0] ** 2
+    norm = np.sqrt(patch_size ** 4 * std ** 2 * 1 / sum).real
+    grf_fg = norm * grf_fg
+    grf_fg[0][0] = mean * patch_size ** 2
+    return grf_fg #, std_eff, norm
+
+
 def grf_foreground(type, size, sigma):
     """
     Define a function the generates a foreground
@@ -425,25 +498,25 @@ def grf_foreground(type, size, sigma):
 
     if type == 1:
         grf = noise * foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma)**0.5
-        return grf, mag_k, ft_signal
+        return fg_normalize(grf, type), mag_k, ft_signal
 
     if type == 2:
         grf = noise * foreground_power_spectrum(mag_k, 57, 1.1, 2.07, 1.0, sigma)**0.5
-        return grf, mag_k, ft_signal
+        return fg_normalize(grf, type), mag_k, ft_signal
 
     if type == 3:
         grf = noise * foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., sigma) ** 0.5
-        return grf, mag_k, ft_signal
+        return fg_normalize(grf, type), mag_k, ft_signal
 
     if type == 4:
         grf = noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., sigma) ** 0.5
-        return grf, mag_k, ft_signal
+        return fg_normalize(grf, type), mag_k, ft_signal
 
     if type == 5:
-        grf = (noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., sigma) ** 0.5 + noise1 *
-               foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., sigma) ** 0.5 + noise2 *
-               foreground_power_spectrum(mag_k, 57, 1.1, 2.07, 1.0, sigma) ** 0.5 + noise3 *
-               foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma) ** 0.5)
+        grf = (fg_normalize(noise * foreground_power_spectrum(mag_k, 0.014, 1.0, 2.10, 35., sigma) ** 0.5, 1) + fg_normalize(noise1 *
+               foreground_power_spectrum(mag_k, 0.088, 3.0, 2.15, 32., sigma) ** 0.5, 2) + fg_normalize(noise2 *
+               foreground_power_spectrum(mag_k, 57, 1.1, 2.07, 1.0, sigma) ** 0.5, 3) + fg_normalize(noise3 *
+               foreground_power_spectrum(mag_k, 1100, 3.3, 2.80, 4.0, sigma) ** 0.5, 4))
         return grf, mag_k, ft_signal
 
 
